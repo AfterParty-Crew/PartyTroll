@@ -1,0 +1,32 @@
+name: Bug report
+description: Report bugs that occur on the unmodified engine here (if you are trying to compile or are making a mod create a help request issue!)
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: "Describe your bug here."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: btarget
+    attributes:
+      label: "What is your build target?"
+      options:
+        - "Windows"
+        - "Linux"
+        - "Mac"
+        - "HTML5"
+        - "Flash/Air-based target"
+        - "Neko, HashLink, or other build system"
+    validations:
+      required: true
+
+  - type: textarea
+    id: terminal
+    attributes:
+      label: "Command Prompt/Terminal logs (if existing)"
+      render: bash
+    validations:
+      required: false
