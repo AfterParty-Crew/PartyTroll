@@ -187,6 +187,8 @@ class FunkinHScript extends FunkinScript
 		super.setDefaultVars();
 
 		var currentState = flixel.FlxG.state;
+
+		interpreter.scriptObject = currentState;
 		
 		set("state", currentState);
 		set("game", currentState);

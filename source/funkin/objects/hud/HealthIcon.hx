@@ -90,15 +90,16 @@ class HealthIcon extends FlxSprite
 
 	function changeIconGraphic(graphic:FlxGraphic)
 	{
-		loadGraphic(graphic, true, Math.floor(graphic.width * 0.5), Math.floor(graphic.height));
-		iconOffsets[0] = (width - 150) * 0.5;
-		iconOffsets[1] = (width - 150) * 0.5;
+		loadGraphic(graphic, true, Math.floor(graphic.width /3), Math.floor(graphic.height));
+		iconOffsets[0] = (width - 150) / 3;
+		iconOffsets[1] = (width - 150) / 3;
+		iconOffsets[2] = (width - 150) / 3;
 		updateHitbox();
 		//trace(iconOffsets[0], iconOffsets[1]);
 
 		animation.add("idle", [0], 0, false, isPlayer);
 		animation.add("losing", [1], 0, false, isPlayer);
-		animation.add("winning", [0], 0, false, isPlayer);
+		animation.add("winning", [2], 0, false, isPlayer);
 
 		animation.play('idle');
 	}
@@ -122,7 +123,7 @@ class HealthIcon extends FlxSprite
 		isOldIcon = false;
 	}
 
-	private var iconOffsets:Array<Float> = [0, 0];
+	private var iconOffsets:Array<Float> = [0, 0, 0];
 	public function changeIcon(char:String) {
 		var file:Null<FlxGraphic> = Paths.image('icons/$char'); 
 
