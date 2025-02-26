@@ -319,8 +319,10 @@ class Interp {
 		if( l != null )
 			return l.r;
 		var v = variables.get(id);
-		if( v != null)
+		if(variables.exists(id))
 			return v;
+
+		
 		if (scriptObject != null) {
 			// search in object
 			if (id == "this") {
