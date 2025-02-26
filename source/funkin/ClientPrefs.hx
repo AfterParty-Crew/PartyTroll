@@ -811,7 +811,8 @@ class ClientPrefs
 
 	public static function initialize(){
 		defaultOptionDefinitions.get("framerate").value = #if linux 60 #else FlxG.stage.application.window.displayMode.refreshRate #end;
-		//locale = openfl.system.Capabilities.language;
+		locale = openfl.system.Capabilities.language;
+		trace(locale);
 
 		optionSave.bind("options_v2");
 		loadDefaultKeys();
