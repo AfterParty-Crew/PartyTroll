@@ -1,1 +1,0 @@
-Sets when to trigger the next word in the lyrics.

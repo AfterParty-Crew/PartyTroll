@@ -193,10 +193,6 @@ class Note extends NoteObject
 	/** The maximum amount of time you can release a hold before it counts as a miss**/
 	public var maxReleaseTime:Float = 0.25;
 
-	#if PE_MOD_COMPATIBILITY
-	public var lowPriority:Bool = false; // John Psych Engine's shitty workaround for really bad mine placement, yet still no *real* hitbox customization lol! Only used when PE Mod Compat is enabled in project.xml
-	#end
-
 	/** Which characters sing this note, if it's blank then the playfield's characters are used **/
 	public var characters:Array<Character> = []; 
 	
@@ -249,18 +245,6 @@ class Note extends NoteObject
 	public var copyY:Bool = true;
 	public var copyAlpha:Bool = true;
 	public var copyVerts:Bool = true;
-	#if PE_MOD_COMPATIBILITY
-	@:isVar
-	public var multAlpha(get, set):Float;
-	function get_multAlpha()return alphaMod;
-	function set_multAlpha(v:Float)return alphaMod = v;
-	
-	// Angle is controlled by verts in the modchart system
-
-	@:isVar public var copyAngle(get, set):Bool;
-	function get_copyAngle()return copyVerts;
-	function set_copyAngle(val:Bool)return copyVerts = val;
-	#end
 
 	#if ALLOW_DEPRECATION
 	public var realColumn:Int; 

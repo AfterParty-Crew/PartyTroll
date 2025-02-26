@@ -342,45 +342,6 @@ class PlayState extends MusicBeatState
 	private var keysArray:Array<Array<FlxKey>>;
 	private var buttonsArray:Array<Array<FlxGamepadInputID>>;
 
-	//// for backwards compat reasons. these aren't ACTUALLY used
-	#if PE_MOD_COMPATIBILITY
-	@:noCompletion public var isCameraOnForcedPos:Bool;
-	@:noCompletion public var healthBar:FNFHealthBar; 
-	@:noCompletion public var healthBarBG:FlxSprite; 
-	@:noCompletion public var iconP1:HealthIcon;
-	@:noCompletion public var iconP2:HealthIcon;
-	@:noCompletion public var timeBar:FlxBar;
-	@:noCompletion public var timeBarBG:FlxSprite;
-	@:noCompletion public var timeTxt:FlxText;
-
-	@:noCompletion public var scoreTxt:FlxText;
-	@:noCompletion public var botplayTxt:FlxText;
-
-	@:noCompletion var songPercent:Float = 0;
-
-	//// Psych achievement shit
-	@:noCompletion var boyfriendIdleTime:Float = 0.0;
-	@:noCompletion var boyfriendIdled:Bool = false;
-	
-	@:noCompletion public var spawnTime:Float = 1500;
-
-	@:noCompletion public static var STRUM_X = 42;
-	@:noCompletion public static var STRUM_X_MIDDLESCROLL = -278;
-
-	@:noCompletion public var strumLineNotes:FlxTypedGroup<StrumNote>;
-	@:noCompletion public var opponentStrums:FlxTypedGroup<StrumNote>;
-	@:noCompletion public var playerStrums:FlxTypedGroup<StrumNote>;
-	#end
-
-	// nightmarevision compatibility shit !
-	#if NMV_MOD_COMPATIBILITY
-	public var whosTurn:String = 'dad';
-	public var defaultCamZoomAdd:Float = 0;
-	@:isVar public var beatsPerZoom(get, set):Int = 4;
-	@:noCompletion function get_beatsPerZoom()return zoomEveryBeat;
-	@:noCompletion function set_beatsPerZoom(val:Int)return zoomEveryBeat = val;
-	#end
-
 	////
 	@:isVar public var songScore(get, set):Int = 0;
 	@:isVar public var totalPlayed(get, set):Float = 0;
@@ -553,22 +514,6 @@ class PlayState extends MusicBeatState
 		#if EASED_SVs
 		resetSVDeltas();
 		#end
-
-		#if PE_MOD_COMPATIBILITY
-		strumLineNotes = new FlxTypedGroup<StrumNote>();
-
-		// Because some things do actually use these lol
-		opponentStrums = new FlxTypedGroup<StrumNote>();
-		playerStrums = new FlxTypedGroup<StrumNote>();
-
-		scoreTxt = botplayTxt = new FlxText();
-
-		strumLineNotes.exists = false;
-		scoreTxt.exists = false;
-
-		add(strumLineNotes);
-		add(scoreTxt);
-		#end
 		
 		//// Gameplay settings
 		if (!isStoryMode){
@@ -732,10 +677,6 @@ class PlayState extends MusicBeatState
 
 		// SONG SPECIFIC SCRIPTS
 		var foldersToCheck:Array<String> = Paths.getFolders('songs/$songName');
-		#if PE_MOD_COMPATIBILITY
-		for (dir in Paths.getFolders('data/$songName'))
-			foldersToCheck.push(dir);
-		#end
 
 		var filesPushed:Array<String> = [];
 		for (folder in foldersToCheck) {
@@ -905,35 +846,6 @@ class PlayState extends MusicBeatState
 		hud.cameras = [camHUD];
 		hud.alpha = ClientPrefs.hudOpacity;
 		add(hud);
-
-		#if PE_MOD_COMPATIBILITY
-		healthBar = hud.getHealthbar();
-		if (healthBar != null){
-			iconP1 = healthBar.iconP1;
-			iconP2 = healthBar.iconP2;
-			healthBarBG = healthBar.healthBarBG;
-		}
-
-		if(hud.timeBar != null)
-			timeBar = hud.timeBar;
-		else
-			timeBar = new FlxBar();
-
-		if(hud.timeBarBG != null)
-			timeBarBG = hud.timeBarBG;
-		else
-			timeBarBG = new FlxSprite();
-		
-		if(hud.timeTxt != null)
-			timeTxt = hud.timeTxt;
-		else
-			timeTxt = new FlxText();
-
-		if(hud is TraditionalHUD || hud is KadeHUD || hud is ClassicHUD)
-			@:privateAccess
-			scoreTxt = (cast hud).scoreTxt;
-		
-		#end
 		
 		//// Generate playfields so you can actually, well, play the game
 		#if ALLOW_DEPRECATION
@@ -1014,10 +926,6 @@ class PlayState extends MusicBeatState
 
 		// SONG SPECIFIC LUA SCRIPTS
 		var foldersToCheck:Array<String> = Paths.getFolders('songs/$songName');
-		#if PE_MOD_COMPATIBILITY
-		for (dir in Paths.getFolders('data/$songName'))
-			foldersToCheck.push(dir);
-		#end
 
 		var filesPushed:Array<String> = [];
 		for (folder in foldersToCheck){
@@ -1781,7 +1689,7 @@ class PlayState extends MusicBeatState
 		var specialLuaScripts:Array<FunkinLua> = [];
 
 		// create note type scripts
-		final notetypeFolders = ["notetypes", #if PE_MOD_COMPATIBILITY "custom_notetypes" #end];
+		final notetypeFolders = ["notetypes"];
 		for (notetype in noteTypeMap.keys()) {
 			var script = createFirstScriptFromFolders(notetype, notetypeFolders, true);
 
@@ -1794,7 +1702,7 @@ class PlayState extends MusicBeatState
 		}
 
 		// create event scripts
-		final eventFolders = ["events", #if PE_MOD_COMPATIBILITY "custom_events" #end];
+		final eventFolders = ["events"];
 		for (eventName in eventPushedMap.keys()) {
 			var script:FunkinScript = createFirstScriptFromFolders(eventName, eventFolders, true);
 			
@@ -2272,14 +2180,6 @@ class PlayState extends MusicBeatState
 
 		for(field in playfields.members)
 			field.fadeIn(skipArrowStartTween);
-
-		#if PE_MOD_COMPATIBILITY
-		for (i in dadField.strumNotes)
-			opponentStrums.add(i);
-
-		for (i in playerField.strumNotes)
-			playerStrums.add(i);
-		#end
 	}
 
 	override function openSubState(SubState:FlxSubState)
@@ -2480,9 +2380,6 @@ class PlayState extends MusicBeatState
 
 		callOnScripts('onUpdate', [elapsed], null, null, null, null, false);
 		*/
-		#if PE_MOD_COMPATIBILITY
-		isCameraOnForcedPos = cameraPoints[cameraPoints.length - 1] != sectionCamera;
-		#end
 		callOnScripts('onUpdate', [elapsed]);
 		if (hudSkinScript != null)
 			hudSkinScript.call("onUpdate", [elapsed]);
@@ -2525,7 +2422,7 @@ class PlayState extends MusicBeatState
 			var lerpVal = Math.exp(-elapsed * 3.125 * camZoomingDecay);
 
 			camGame.zoom = FlxMath.lerp(
-				defaultCamZoom #if NMV_MOD_COMPATIBILITY + defaultCamZoomAdd #end,
+				defaultCamZoom,
 				camGame.zoom,
 				lerpVal
 			);
@@ -2853,23 +2750,14 @@ class PlayState extends MusicBeatState
 				switch(value1.toLowerCase().trim()){
 					case 'dad' | 'opponent':
 						if (callOnScripts('onMoveCamera', ["dad"]) != Globals.Function_Stop){
-							#if NMV_MOD_COMPATIBILITY
-							whosTurn = 'dad';
-							#end
 							moveCamera(dad);
 						}
 					case 'gf' | 'girlfriend':
 						if (callOnScripts('onMoveCamera', ["gf"]) != Globals.Function_Stop){
-							#if NMV_MOD_COMPATIBILITY
-							whosTurn = 'gf';
-							#end
 							moveCamera(gf);
 						}
 					default:
 						if (callOnScripts('onMoveCamera', ["bf"]) != Globals.Function_Stop){
-							#if NMV_MOD_COMPATIBILITY
-							whosTurn = 'bf';
-							#end
 							moveCamera(boyfriend);
 						}
 				}

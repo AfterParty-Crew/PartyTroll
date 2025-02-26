@@ -2841,36 +2841,27 @@ class ChartingState extends MusicBeatState
 		if(notetypeScripts.exists(notetype)) return;
 		var did:Bool = false;
 
-		#if PE_MOD_COMPATIBILITY
-		for (file in ["notetypes", "custom_notetypes"]) {
-			var baseScriptFile:String = '$file/$notetype';
-		#else
-			var baseScriptFile:String = 'notetypes/$notetype';
-		#end
-			var exts = Paths.HSCRIPT_EXTENSIONS; // TODO: maybe FunkinScript.extensions, FunkinScript.hscriptExtensions and FunkinScript.luaExtensions??
-			for (ext in exts)
+		var baseScriptFile:String = 'notetypes/$notetype';
+		for (ext in Paths.HSCRIPT_EXTENSIONS)
+		{
+			if (did)
+				break;
+			var baseFile = '$baseScriptFile.$ext';
+			var files = [#if MODS_ALLOWED Paths.modFolders(baseFile), #end Paths.getPreloadPath(baseFile)];
+			for (file in files)
 			{
+				if (!Paths.exists(file))
+					continue;
+				if (ext == 'hscript')
+				{
+					var script = FunkinHScript.fromFile(file);
+					notetypeScripts.set(notetype, script);
+					did = true;
+				}
 				if (did)
 					break;
-				var baseFile = '$baseScriptFile.$ext';
-				var files = [#if MODS_ALLOWED Paths.modFolders(baseFile), #end Paths.getPreloadPath(baseFile)];
-				for (file in files)
-				{
-					if (!Paths.exists(file))
-						continue;
-					if (ext == 'hscript')
-					{
-						var script = FunkinHScript.fromFile(file);
-						notetypeScripts.set(notetype, script);
-						did = true;
-					}
-					if (did)
-						break;
-				}
 			}
-		#if PE_MOD_COMPATIBILITY
 		}
-		#end
 	}
 
 	function setupNoteData(i:Array<Dynamic>, isNextSection:Bool):Note

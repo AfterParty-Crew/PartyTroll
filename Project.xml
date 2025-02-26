@@ -7,8 +7,8 @@
 
 	<!-- _________________________ Application Settings _________________________ -->
 
-    <app title="Troll Engine" file="Trolled" packageName="com.sowy.trollengine"
-        package="com.sowy.trollengine" main="Main" version="0.2.8" company="Sowy" />
+    <app title="Soni's Party Night!" file="SonisPartyNight" packageName="com.amano.sonispartynight"
+        package="com.amano.sonispartynight" main="Main" version="0.2.8" company="Amano" />
 
 	<!--Switch Export with Unique ApplicationID and Icon-->
     <set name="APP_ID" value="0x0100f6c013bbc000" />
@@ -71,10 +71,6 @@
     <define name="SCRIPTABLE_STATES" if="HSCRIPT_ALLOWED" />
 	<!--Remove if you dont want Lua to be usable. Note that if you remove this, you should remove PE_MOD_COMPATIBILITY too -->
     <define name="LUA_ALLOWED" if="desktop cpp" unless="mac" />
-	<!--Remove if you don't want Psych Engine mod compatibility -->
-    <define name="PE_MOD_COMPATIBILITY" if="LUA_ALLOWED MODS_ALLOWED" />
-	<!--Remove if you don't want NightmareVision mod compatibility-->
-	<define name="NMV_MOD_COMPATIBILITY" if="PE_MOD_COMPATIBILITY MODS_ALLOWED HSCRIPT_ALLOWED"/>
 
 	<!--Remove if you don't want to use FlxAnimate-->
 <!-- <define name="USING_FLXANIMATE" />-->
@@ -108,11 +104,6 @@
 	<haxelib name="flixel" version="5.6.2" />
 	<haxelib name="flixel-ui" version="2.6.1" />
 	<haxelib name="flixel-addons" version="3.2.3" />
-
-	<section if="USING_FLXANIMATE">
-		<haxelib name="flxanimate" version="3.0.4"/>
-		<classpath path="flxAnimateShadow"/> <!--Remove if FlxAnimate updates and lets you write your own code to determine how filesystem shit is gotten-->
-	</section>
 
 	<haxelib name="moonchart" version="0.4.0" if="USING_MOONCHART" unless="USING_NEW_MOONCHART"/>
 	<haxelib name="moonchart" version="git" if="USING_NEW_MOONCHART"/>

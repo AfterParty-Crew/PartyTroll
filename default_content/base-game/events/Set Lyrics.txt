@@ -1,2 +1,0 @@
-Sets lyrics up for this location
-Value 1: Text. Leave blank to clear

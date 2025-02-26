@@ -87,42 +87,19 @@ class Song
 	public final songId:String;
 	public final folder:String = '';
 
-	public var songPath(get, default):String;
+	public var songPath:String;
 	public var charts(get, null):Array<String>;
 	private var metadataCache = new Map<String, SongMetadata>();
-
-	#if PE_MOD_COMPATIBILITY
-	private final defaultSongPath:String;
-	private final dataPath:String;
-
-	inline function isUsingDefaultSongPath():Bool {
-		@:bypassAccessor
-		return this.songPath == null;
-	}
-	#end
 
 	public function new(songId:String, ?folder:String)
 	{
 		this.songId = songId;
 		this.folder = folder ?? '';
-		#if !PE_MOD_COMPATIBILITY
 		this.songPath = Paths.getFolderPath(this.folder) + '/songs/$songId';
-		#else
-		var contentFolder = Paths.getFolderPath(this.folder);
-		this.defaultSongPath = '$contentFolder/songs/$songId';
-		this.dataPath = '$contentFolder/data/$songId';
-		#end
 	}
 
 	public function getSongFile(fileName:String) {
 		var path = '$songPath/$fileName';
-
-		#if PE_MOD_COMPATIBILITY
-		if (isUsingDefaultSongPath() && !Paths.exists(path)) {
-			var pp = '$dataPath/$fileName';
-			if (Paths.exists(pp)) path = pp;
-		}
-		#end
 
 		return path;
 	}
@@ -255,9 +232,6 @@ class Song
 	//
 	function get_charts() 
 		return charts ?? (charts = Song.getCharts(this));
-
-	function get_songPath()
-		return songPath #if PE_MOD_COMPATIBILITY ?? defaultSongPath #end;
 
 	////
 
@@ -417,12 +391,6 @@ class Song
 			}else {
 				for (fileName in crumb) processFileName(fileName);
 			}
-
-			////
-			#if PE_MOD_COMPATIBILITY
-			folder = Paths.mods('${song.folder}/data/$songId/');
-			Paths.iterateDirectory(folder, processFileName);
-			#end
 		}
 		#end
 
@@ -451,9 +419,6 @@ class Song
 		}
 
 		var contentPath = Paths.getFolderPath(song.folder);
-		#if PE_MOD_COMPATIBILITY
-		Paths.iterateDirectory('$contentPath/data/$songId/', processFileName);
-		#end
 		Paths.iterateDirectory('$contentPath/songs/$songId/', processFileName);
 		
 		return [for (name in charts.keys()) name];
@@ -512,11 +477,6 @@ class Song
 	{
 		var path:String = Paths.formatToSongPath(folder) + '/' + Paths.formatToSongPath(jsonInput) + '.json';
 		var fullPath = Paths.getPath('songs/$path', false);
-
-		#if PE_MOD_COMPATIBILITY
-		if (!Paths.exists(fullPath))
-			fullPath = Paths.getPath('data/$path', false);
-		#end
 
 		return parseSongJson(fullPath);
 	}
@@ -651,10 +611,7 @@ class Song
 
 				//// 2
 				if (swagJson.path==null) return true;
-				var jsonPath:Path = new Path(swagJson.path
-					#if PE_MOD_COMPATIBILITY
-					.replace("data/", "songs/")
-					#end);
+				var jsonPath:Path = new Path(swagJson.path);
 
 				var folderPath = jsonPath.dir;
 				if (folderPath == null) return true; // could mean that it's somehow on the same folder as the exe but fuck it
