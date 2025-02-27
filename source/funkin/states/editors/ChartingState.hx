@@ -1130,14 +1130,7 @@ class ChartingState extends MusicBeatState
 
 		#if (sys && (hscript || LUA_ALLOWED))
 		var directories:Array<String> = Paths.getFolders('notetypes');
-		var allowedFormats = [
-			#if hscript
-			'.hscript',
-			#end
-			#if LUA_ALLOWED
-			'.lua'
-			#end
-		];
+		var allowedFormats = Paths.SCRIPT_EXTENSIONS;
 		for (directory in directories)
 		{
 			if (!FileSystem.exists(directory))
@@ -1159,7 +1152,7 @@ class ChartingState extends MusicBeatState
 				if (fileFormat == null) // if its not supported
 					continue;
 
-				var fileToCheck:String = file.substr(0, file.length - fileFormat.length); // get file name
+				var fileToCheck:String = file.substr(0, file.length - fileFormat.length - 1); // get file name
 				if (noteTypeMap.exists(fileToCheck)) // if it already is on the list
 					continue;
 
@@ -2839,27 +2832,18 @@ class ChartingState extends MusicBeatState
 	function initNoteType(notetype:String){
 		if(notetype == '') return;
 		if(notetypeScripts.exists(notetype)) return;
-		var did:Bool = false;
 
 		var baseScriptFile:String = 'notetypes/$notetype';
 		for (ext in Paths.HSCRIPT_EXTENSIONS)
 		{
-			if (did)
-				break;
 			var baseFile = '$baseScriptFile.$ext';
 			var files = [#if MODS_ALLOWED Paths.modFolders(baseFile), #end Paths.getPreloadPath(baseFile)];
 			for (file in files)
 			{
 				if (!Paths.exists(file))
 					continue;
-				if (ext == 'hscript')
-				{
-					var script = FunkinHScript.fromFile(file);
-					notetypeScripts.set(notetype, script);
-					did = true;
-				}
-				if (did)
-					break;
+				var script = FunkinHScript.fromFile(file);
+				notetypeScripts.set(notetype, script);
 			}
 		}
 	}

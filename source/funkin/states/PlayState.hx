@@ -837,10 +837,11 @@ class PlayState extends MusicBeatState
 			var iP2:String = dad?.healthIcon ?? "face";
 
 			switch(ClientPrefs.etternaHUD){
+				case 'Psych': hud = new PsychHUD(iP1, iP2, SONG.song, stats);
 				case 'Advanced': hud = new AdvancedHUD(iP1, iP2, SONG.song, stats);
 				case 'Kade': hud = new KadeHUD(iP1, iP2, SONG.song, stats);
 				case 'Classic': hud = new ClassicHUD(iP1, iP2, SONG.song, stats);
-				default: hud = new TraditionalHUD(iP1, iP2, SONG.song, stats);
+				default: hud = new PartyHUD(iP1, iP2, SONG.song, stats);
 			}
 		}
 		hud.cameras = [camHUD];
