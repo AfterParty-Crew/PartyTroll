@@ -79,7 +79,7 @@ class ClientPrefs
 				display: "Directional Camera",
 				desc: "When toggled, the camera will move with the focused character's animations",
 				type: Toggle,
-				value: false,
+				value: true,
 				data: []
 			},
 			"bread" => {
@@ -254,7 +254,7 @@ class ClientPrefs
 				display: "Countdown on Resume",
 				desc: "Counts down whenever you select \"RESUME\" on the Pause Menu.",
 				type: Toggle,
-				value: true,
+				value: false,
 				data: []
 			},
 			"songSyncMode" => {
@@ -506,7 +506,7 @@ class ClientPrefs
 				display: "Botplay Mark",
 				desc: "How to display the Botplay mark.",
 				type: Dropdown,
-				value: "Subtle",
+				value: "Psych",
 				data: [
 					"options" => ["Hidden", "Subtle", "Psych"]
 				],
