@@ -465,20 +465,20 @@ class Paths
 		return finalPath.toLowerCase();
 	}
 
-	public static function getGraphic(path:String, cache:Bool = true, gpu:Bool = false):Null<FlxGraphic>
+	public static function getGraphic(path:String, cache:Bool = true, gpu:Bool = true):Null<FlxGraphic>
 	{
 		var newGraphic:FlxGraphic;
 
 		if (cache && currentTrackedAssets.exists(path)) {
 			newGraphic = currentTrackedAssets.get(path);
-			if (!localTrackedAssets.contains(path)) 
+			if (!localTrackedAssets.contains(path))
 				localTrackedAssets.push(path);
 		}
 		else {
 			var bitmap:BitmapData = getBitmapData(path);
 			if (bitmap == null) return null;
 
-			if (gpu) {
+			if (gpu && ClientPrefs.cacheOnGPU) {
 				var texture = FlxG.stage.context3D.createRectangleTexture(bitmap.width, bitmap.height, BGRA, true);
 				texture.uploadFromBitmapData(bitmap);
 				bitmap.image.data = null;
@@ -508,14 +508,14 @@ class Paths
 	inline public static function imageExists(key:String):Bool
 		return Paths.exists(imagePath(key));
 
-	inline static public function image(key:String, ?library:String):Null<FlxGraphic>
-		return returnGraphic(key, library);
+	inline static public function image(key:String, ?library:String, gpu:Bool = true):Null<FlxGraphic>
+		return returnGraphic(key, library, gpu);
 
-	public static function returnGraphic(key:String, ?library:String):Null<FlxGraphic>
+	public static function returnGraphic(key:String, ?library:String, gpu:Bool = true):Null<FlxGraphic>
 	{
 		var path:String = imagePath(key);
 
-		var graphic = getGraphic(path);
+		var graphic = getGraphic(path, gpu);
 		if (graphic==null && Main.showDebugTraces)
 			trace('bitmap "$key" => "$path" returned null.');
 

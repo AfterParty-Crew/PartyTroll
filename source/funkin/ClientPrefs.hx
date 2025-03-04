@@ -625,6 +625,14 @@ class ClientPrefs
 				value: false,
 				data: []
 			},
+			// Cache Shit
+			"cacheOnGPU" => {
+				display: "GPU Caching",
+				desc: "If checked, allows the GPU to be used for caching textures, decreasing RAM usage.\nDon't turn this on if you have a shitty Graphics Card.",
+				type: Toggle,
+				value: false,
+				data: []
+			},
 			/*
 			"modcharts" => {
 				display: "Modcharts",
@@ -680,7 +688,6 @@ class ClientPrefs
 				value: true,
 				data: []
 			}
-			
 		];
 	}
 

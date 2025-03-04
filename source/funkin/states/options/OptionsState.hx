@@ -26,21 +26,9 @@ class OptionsState extends MusicBeatState
 		openSubState(daSubstate);
 
 		super.create();
-
-		#if tgt
-		var bgGraphic = Paths.image('tgtmenus/optionsbg');
-		bg = new FlxSprite((FlxG.width - bgGraphic.width) * 0.5, (FlxG.height - bgGraphic.height) * 0.5, bgGraphic);
-		add(bg);
-
-		backdrop = new flixel.addons.display.FlxBackdrop(Paths.image("grid"));
-		backdrop.velocity.set(30, 30);
-		backdrop.alpha = 0.15;
-		add(backdrop);
-
-		#else
 		
 		var color = 0xff7186fd; //0xFFea71fd;
-		var bgGraphic = Paths.image('menuDesat');
+		var bgGraphic = Paths.image('menuDesat', "", false);
 		var adjustColor = new funkin.objects.shaders.AdjustColor();
 		adjustColor.contrast = 1.0;
 		adjustColor.brightness = -0.125;
@@ -88,7 +76,6 @@ class OptionsState extends MusicBeatState
 		bg.updateHitbox();
 		bg.screenCenter();
 		add(bg);
-		#end
 	}
 
 	override public function resetSubState(){

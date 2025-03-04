@@ -138,6 +138,7 @@ class OptionsSubstate extends MusicBeatSubstate
 					"lowQuality",
 					"globalAntialiasing",
 					"multicoreLoading",
+					"cacheOnGPU",
 					"optimizeHolds",
 					"holdSubdivs",
 					"drawDistanceModifier" // apparently i forgot to add this in the new options thing lmao
