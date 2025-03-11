@@ -288,6 +288,8 @@ class PlayState extends MusicBeatState
 	public var playfields = new FlxTypedGroup<PlayField>();
 	public var grpNoteSplashes = new FlxTypedGroup<NoteSplash>();
 
+	public var registeredMods:Bool = false;
+
 	public var playerField:PlayField;
 	public var dadField:PlayField;
 
@@ -1345,27 +1347,12 @@ class PlayState extends MusicBeatState
 			return;
 		}
 
-		inCutscene = false;
-
-		if (hudSkinScript != null) {
-			if (callScript(hudSkinScript, "onStartCountdown") == Globals.Function_Stop)
-				return;
-		}
-
-		if (callOnScripts('onStartCountdown') == Globals.Function_Stop) {
-			return;
-		}
-
-		if (skipCountdown || startOnTime > 0)
-			skipArrowStartTween = true;
-
-		generateStrums();
-
 		#if ALLOW_DEPRECATION
 		callOnScripts('preModifierRegister'); // deprecated
 		#end
 
-		if (callOnScripts('onModifierRegister') != Globals.Function_Stop) {
+		if (callOnScripts('onModifierRegister') != Globals.Function_Stop && !registeredMods) {
+			registeredMods = true;
 			modManager.registerDefaultModifiers();
 
 			#if !tgt
@@ -1394,6 +1381,22 @@ class PlayState extends MusicBeatState
 		#end
 		callOnScripts('onModifierRegisterPost');
 		signals.onModifierRegisterPost.dispatch();
+
+		inCutscene = false;
+
+		if (hudSkinScript != null) {
+			if (callScript(hudSkinScript, "onStartCountdown") == Globals.Function_Stop)
+				return;
+		}
+
+		if (callOnScripts('onStartCountdown') == Globals.Function_Stop) {
+			return;
+		}
+
+		if (skipCountdown || startOnTime > 0)
+			skipArrowStartTween = true;
+
+		generateStrums();
 
 		startedCountdown = true;
 		setOnScripts('startedCountdown', true);
