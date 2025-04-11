@@ -2606,7 +2606,10 @@ class PlayState extends MusicBeatState
 
 		////
 		persistentUpdate = false;
-		persistentDraw = false;
+		// persistentDraw = false;
+
+		boyfriend.visible = false;
+		camHUD.visible = camOther.visible = false;
 
 		if (instaRespawn){
 			FlxG.camera.bgColor = 0xFF000000;

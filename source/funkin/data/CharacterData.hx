@@ -144,13 +144,13 @@ class CharacterData {
 		if (!name.startsWith('sing'))
 			[0.0, 0.0];
 		else if (name.startsWith('singLEFT'))
-			[-30.0, 0.0];
+			[-15.0, 0.0];
 		else if (name.startsWith('singDOWN'))
-			[0.0, 30.0];
+			[0.0, 15.0];
 		else if (name.startsWith('singUP'))
-			[0.0, -30.0];
+			[0.0, -15.0];
 		else if (name.startsWith('singRIGHT'))
-			[30.0, 0.0];
+			[15.0, 0.0];
 		else
 			[0.0, 0.0];
 	}

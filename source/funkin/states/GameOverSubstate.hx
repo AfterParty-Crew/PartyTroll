@@ -22,6 +22,7 @@ class GameOverSubstate extends MusicBeatSubstate
 	public static var deathSoundName:String = 'fnf_loss_sfx';
 	public static var loopSoundName:String = 'gameOver';
 	public static var endSoundName:String = 'gameOverEnd';
+	public static var loopBpm:Float = 100;
 	
 	public static var genericName:String;
 	public static var genericSound:String;
@@ -64,6 +65,8 @@ class GameOverSubstate extends MusicBeatSubstate
 		genericSound = "gameoverGeneric";
 		genericMusic = "";
 
+		loopBpm = 100;
+
 		voicelineNumber = null;
 		voicelineAmount = 0;
 		voicelineName = null;
@@ -77,11 +80,11 @@ class GameOverSubstate extends MusicBeatSubstate
 
 		FlxG.timeScale = 1.0;
 		
-		FlxG.camera.bgColor = FlxColor.BLACK;
+		FlxG.camera.flash(FlxColor.RED, 1);
 		FlxG.camera.follow(camFollowPos, LOCKON, 1);
 
 		Conductor.songPosition = 0;
-		Conductor.changeBPM(100);
+		Conductor.changeBPM(loopBpm);
 
 		if (genericBitch != null){
 			startGeneric();
@@ -192,6 +195,13 @@ class GameOverSubstate extends MusicBeatSubstate
 		]);
 
 		_musicAsset = Paths.music(loopSoundName);
+
+		var bg:FlxSprite = new FlxSprite().makeGraphic(1280*2, 720*2, FlxColor.BLACK);
+		bg.screenCenter();
+		bg.scrollFactor.set();
+		add(bg);
+		bg.alpha = 0;
+		FlxTween.tween(bg, {alpha: 1}, 4, {ease: FlxEase.circOut});
 
 		boyfriend = new Character(
 			char.x - char.positionArray[0], 
