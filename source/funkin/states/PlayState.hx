@@ -1791,7 +1791,7 @@ class PlayState extends MusicBeatState
 				#if ALLOW_DEPRECATION
 				swagNote.realColumn = daNoteData;
 				#end
-				swagNote.sustainLength = songNotes[2] <= Conductor.stepCrotchet ? songNotes[2] : (susLength + 1) * Conductor.stepCrotchet; // +1 because hold end
+				swagNote.sustainLength = songNotes[2]; // +1 because hold end // shit nvm we are dumb sooo.... ok fuck yeah
 				swagNote.ID = notes.length;
 
 				modchartObjects.set('note${swagNote.ID}', swagNote);

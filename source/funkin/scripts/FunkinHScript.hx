@@ -248,6 +248,9 @@ class FunkinHScript extends FunkinScript
 		#if USING_FLXANIMATE
 		set("FlxAnimate", FlxAnimateCompat);
 		#end
+
+		// i have no idea
+		set("Json", {parse: haxe.Json.parse, stringify: haxe.Json.stringify});
 	}
 
 	private function setVideoVars() {

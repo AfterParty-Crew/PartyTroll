@@ -19,10 +19,10 @@ typedef DiscordRPCInfo = {
 }
 
 private final defaultRPCInfo:DiscordRPCInfo = {
-	applicationId: '814588678700924999',
+	applicationId: '1141731269152084120',
 	allowedImageKeys: ["icon"],
 
-	defaultLargeImageText: 'Troll Engine ' + Main.Version.displayedVersion,
+	defaultLargeImageText: "Soni's Party Night",
 
 	defaultLargeImageKey: 'icon',
 	defaultSmallImageKey: 'none'

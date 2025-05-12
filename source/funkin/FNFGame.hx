@@ -36,7 +36,7 @@ class FNFGame extends FlxGame
 		startFullscreen = startFullscreen ?? FlxG.save.data.fullscreen;
 
 		super(gameWidth, gameHeight, initialState, updateFramerate, drawFramerate, skipSplash, startFullscreen);
-		_customSoundTray = flixel.system.ui.DefaultFlxSoundTray;
+		_customSoundTray = funkin.objects.SoundTray;
 
 		FlxG.sound.volume = FlxG.save.data.volume;
 		FlxG.mouse.useSystemCursor = true;
