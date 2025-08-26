@@ -90,11 +90,11 @@ class HealthIcon extends FlxSprite
 
 	function changeIconGraphic(graphic:FlxGraphic)
 	{
-		loadGraphic(graphic, true, Math.floor(graphic.width * 0.5), Math.floor(graphic.height));
+		loadGraphic(graphic, true, Math.floor(graphic.width / 3), Math.floor(graphic.height));
 
 		animation.add("idle", [0], 0, false, isPlayer);
 		animation.add("losing", [1], 0, false, isPlayer);
-		animation.add("winning", [0], 0, false, isPlayer);
+		animation.add("winning", [2], 0, false, isPlayer);
 
 		animation.play('idle');
 	}

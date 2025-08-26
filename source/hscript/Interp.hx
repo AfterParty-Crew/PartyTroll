@@ -46,7 +46,18 @@ class Interp {
 	#end
 
 	public var parentObject:Dynamic;
-	private var parentObjectCls(get, default):Class<Dynamic>;
+	var fieldsCache:Array<String>;
+	private var parentObjectFields(get, default):Array<String>;
+	function get_parentObjectFields()
+	{
+		if (parentObject == null)
+			return [];
+		else if (fieldsCache == null)
+			fieldsCache = Type.getInstanceFields(Type.getClass(parentObject));
+
+		return fieldsCache;
+	}
+	@:isVar private var parentObjectCls(get, never):Class<Dynamic>;
 	function get_parentObjectCls()
 	{
 		if (parentObject != null)
@@ -297,26 +308,23 @@ class Interp {
 	}
 
 	function resolve( id : String ) : Dynamic {
-		if(!variables.exists(id))
-		{
-			if (parentObject != null)
-			{
-				if (Reflect.hasField(parentObject, 'get_$id'))
-					return Reflect.getProperty(parentObject, 'get_$id')();
-				else if (Reflect.hasField(parentObject, id))
-					return Reflect.getProperty(parentObject, id);
-			}
-
-			if (parentObjectCls != null)
-			{
-				if (Reflect.hasField(parentObjectCls, 'get_$id'))
-					return Reflect.getProperty(parentObjectCls, 'get_$id')();
-				else if (Reflect.hasField(parentObjectCls, id))
-					return Reflect.getProperty(parentObjectCls, id);
-			}
-		}
-		else
+		if(variables.exists(id))
 			return variables.get(id);
+
+		if (parentObject != null)
+		{
+			if (parentObjectFields.contains('get_$id'))
+				return Reflect.field(parentObject, 'get_$id')();
+			else if (parentObjectFields.contains(id))
+				return Reflect.field(parentObject, id);
+		}
+		if (parentObjectCls != null)
+		{
+			if (Type.getClassFields(parentObjectCls).contains('get_$id'))
+				return Reflect.field(parentObjectCls, 'get_$id')();
+			else if (Type.getClassFields(parentObjectCls).contains(id))
+				return Reflect.field(parentObjectCls, id);
+		}
 
 		error(EUnknownVariable(id));
 		return null;
