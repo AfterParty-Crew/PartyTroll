@@ -488,7 +488,7 @@ class ChartingState extends MusicBeatState
 		// Paths.clearMemory();
 
 		var bg:FlxSprite = new FlxSprite(0, 0, Paths.image('menuDesat'));
-		bg.color = FlxColor.fromHSB(Std.random(64) * 5.625, 0.15, 0.15);
+		bg.color = 0xff463c78;
 		bg.scrollFactor.set();
 		bg.screenCenter();
 		add(bg);
@@ -619,6 +619,7 @@ class ChartingState extends MusicBeatState
 		UI_box.resize(300, 400);
 		UI_box.scrollFactor.set();
 		add(UI_box);
+		UI_box.color = 0xff796fe3;
 
 		adjustCamPos();
 
