@@ -4,7 +4,6 @@ import haxe.io.Bytes;
 import openfl.utils.ByteArray;
 import haxe.ds.StringMap;
 import funkin.data.LocalizationMap;
-import funkin.data.WeekData;
 import flixel.addons.display.FlxRuntimeShader;
 import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.graphics.FlxGraphic;
@@ -23,29 +22,26 @@ import sys.io.File;
 #end
 
 //// idgaf about libraries
-
+@:access(openfl.display.BitmapData)
 class Paths
 {
 	inline public static var IMAGE_EXT = "png";
 	inline public static var SOUND_EXT = "ogg";
-	inline public static var VIDEO_EXT = "mp4";
 
 	public static final HSCRIPT_EXTENSIONS:Array<String> = ["hscript", "hxs", "hx"];
-	public static final LUA_EXTENSIONS:Array<String> = ["lua"];
 	public static final SCRIPT_EXTENSIONS:Array<String> = [
 		"hscript",
 		"hxs",
-		"hx",
-		#if LUA_ALLOWED "lua" #end]; // TODo: initialize this by combining the top 2 vars ^
+		"hx"
+	];
 
 
 	public static function getFileWithExtensions(scriptPath:String, extensions:Array<String>) {
 		for (fileExt in extensions) {
 			var baseFile:String = '$scriptPath.$fileExt';
-			for (file in [#if MODS_ALLOWED Paths.modFolders(baseFile), #end Paths.getPreloadPath(baseFile)]) {
-				if (Paths.exists(file))
-					return file;
-			}
+			var file:String = getPath(baseFile);
+			if (Paths.exists(file))
+				return file;
 		}
 
 		return null;
@@ -67,14 +63,6 @@ class Paths
 		#end
 	}
 
-	public inline static function getLuaPath(scriptPath:String) {
-		#if LUA_ALLOWED
-		return getFileWithExtensions(scriptPath, Paths.LUA_EXTENSIONS);
-		#else
-		return null;
-		#end
-	}
-
 	public static var localTrackedAssets:Array<String> = [];
 	public static var currentTrackedAssets:Map<String, FlxGraphic> = [];
 	public static var currentTrackedSounds:Map<String, Sound> = [];
@@ -83,9 +71,9 @@ class Paths
 		'assets/music/freakyIntro.$SOUND_EXT',
 		'assets/music/freakyMenu.$SOUND_EXT',
 		'assets/music/breakfast.$SOUND_EXT',
-		'content/global/music/freakyIntro.$SOUND_EXT',
-		'content/global/music/freakyMenu.$SOUND_EXT',
-		'content/global/music/breakfast.$SOUND_EXT',
+		'$contentFolderName/global/music/freakyIntro.$SOUND_EXT',
+		'$contentFolderName/global/music/freakyMenu.$SOUND_EXT',
+		'$contentFolderName/global/music/breakfast.$SOUND_EXT',
 		'assets/images/Garlic-Bread-PNG-Images.$IMAGE_EXT'
 	];
 
@@ -120,11 +108,8 @@ class Paths
 				@:privateAccess
 				if (obj != null)
 				{
-					Assets.cache.removeBitmapData(key);
-					FlxG.bitmap._cache.remove(key);
-					obj.destroy();
+					destroyGraphic(obj);
 					currentTrackedAssets.remove(key);
-
 					// trace('cleared $key');
 				}
 			}
@@ -137,20 +122,21 @@ class Paths
 	public static function removeBitmap(key:String)
 	{
 		var obj = currentTrackedAssets.get(key);
-		if (obj != null) @:privateAccess {
+		@:privateAccess
+		if (obj != null)
+		{
 			localTrackedAssets.remove(key);
-
-			Assets.cache.removeBitmapData(key);
-			FlxG.bitmap._cache.remove(key);
-			obj.destroy();
-			currentTrackedAssets.remove(key);
-			
-			//trace('removed $key');
-			//return true;
+			destroyGraphic(obj);
+			currentTrackedAssets.remove(key);		
 		}
+	}
 
-		//trace('did not remove $key');
-		//return false;
+	inline static function destroyGraphic(graphic:FlxGraphic)
+	{
+		// free some gpu memory
+		if (graphic != null && graphic.bitmap != null && graphic.bitmap.__texture != null)
+			graphic.bitmap.__texture.dispose();
+		FlxG.bitmap.remove(graphic);
 	}
 
 	public static function clearStoredMemory()
@@ -160,9 +146,7 @@ class Paths
 		for (key => obj in FlxG.bitmap._cache) {
 			if (obj != null && !currentTrackedAssets.exists(key)) {
 				// trace('cleared $key');
-				Assets.cache.removeBitmapData(key);
-				FlxG.bitmap._cache.remove(key);
-				obj.destroy();
+				destroyGraphic(obj);
 			}
 		}
 
@@ -192,16 +176,7 @@ class Paths
 
 	public static function _getPath(key:String, ignoreMods:Bool = false):Null<String>
 	{
-		var path:String;
-
-		#if MODS_ALLOWED
-		if (ignoreMods != true) {
-			path = Paths.modFolders(key);
-			if (Paths.exists(path)) return path;
-		}
-		#end
-
-		path = Paths.getPreloadPath(key);
+		var path:String = getPath(key, ignoreMods);
 		return Paths.exists(path) ? path : null;
 	}
 
@@ -235,9 +210,9 @@ class Paths
 		return getPath('fonts/$key');
 	}
 
-	static public function video(key:String, ignoreMods:Bool = false):String
+	static public function video(key:String, ignoreMods:Bool = false, ext:String = "mp4"):String
 	{
-		return getPath('videos/$key.$VIDEO_EXT', ignoreMods);
+		return getPath('videos/$key.$ext', ignoreMods);
 	}
 
 	static public function getShaderFragment(name:String):Null<String>
@@ -278,16 +253,6 @@ class Paths
 	inline static public function inst(song:String):Null<Sound>
 	{
 		return track(song, "Inst");
-	}
-
-	inline static public function lua(key:String, ?library:String)
-	{
-		for (ext in Paths.LUA_EXTENSIONS) {
-			var r = getPreloadPath('$key.$ext');
-			if (Paths.exists(r))
-				return r;
-		}
-		return null;
 	}
 
 	inline static public function withoutEndingSlash(path:String)
@@ -377,10 +342,10 @@ class Paths
 	}
 	inline static public function getSparrowAtlas(key:String, ?library:String):FlxAtlasFrames
 	{
-		var xmlPath = getPath('images/$key.xml');
+		var rawXml = Paths.getContent(getPath('images/$key.xml'));
 		return FlxAtlasFrames.fromSparrow(
 			image(key, library),
-			Paths.exists(xmlPath) ? Paths.getContent(xmlPath) : xmlPath
+			rawXml != null ? Xml.parse(rawXml) : null
 		);
 	}
 
@@ -394,16 +359,12 @@ class Paths
 	}
 
 	/** returns a FlxRuntimeShader but with file names lol **/ 
-	public static function getShader(fragFile:String = null, vertFile:String = null, version:Int = 120):FlxRuntimeShader
+	public static function getShader(fragFile:String = null, vertFile:String = null, version:Int = null):FlxRuntimeShader
 	{
 		try{
-			var fragPath:Null<String> = fragFile==null ? null : getShaderFragment(fragFile);
-			var vertPath:Null<String> = vertFile==null ? null : getShaderVertex(vertFile);
-
 			return new FlxRuntimeShader(
-				fragFile==null ? null : Paths.getContent(fragPath), 
-				vertFile==null ? null : Paths.getContent(vertPath),
-				//version
+				fragFile==null ? null : Paths.getContent(getShaderFragment(fragFile)), 
+				vertFile==null ? null : Paths.getContent(getShaderVertex(vertFile))
 			);
 		}catch(e:Dynamic){
 			trace("Shader compilation error:" + e.message);
@@ -444,22 +405,22 @@ class Paths
 	inline public static function bytes(key:String, ?ignoreMods:Bool = false):Null<Bytes>
 		return getBytes(getPath(key, ignoreMods));
 
-	private static final hideChars = ['.','!','?','%','"',",","'"];
-	private static final invalidChars = [' ','#','>','<',':',';','\\','~','&'];
-
 	inline static public function formatToSongPath(path:String) {
 		var finalPath = "";
 
 		for (idx in 0...path.length)
 		{
-			var char = path.charAt(idx);   
-
-			if (hideChars.contains(char))
-				continue;
-			else if (invalidChars.contains(char))
-				finalPath += "-";
-			else 
-				finalPath += char;
+			var char = path.charAt(idx);
+			switch(char) {
+				case '.' | '!' | '?' | '%' | '"' | "," | "'":
+					continue;
+				
+				case ' ' | '#' | '>' | '<' | ':' | ';' | '\\' | '~' | '&':
+					finalPath += "-";
+				
+				default:
+					finalPath += char;
+			}
 		}
 
 		return finalPath.toLowerCase();
@@ -471,19 +432,26 @@ class Paths
 
 		if (cache && currentTrackedAssets.exists(path)) {
 			newGraphic = currentTrackedAssets.get(path);
-			if (!localTrackedAssets.contains(path))
+			if (!localTrackedAssets.contains(path)) 
 				localTrackedAssets.push(path);
 		}
 		else {
 			var bitmap:BitmapData = getBitmapData(path);
 			if (bitmap == null) return null;
 
-			if (gpu && ClientPrefs.cacheOnGPU) {
-				var texture = FlxG.stage.context3D.createRectangleTexture(bitmap.width, bitmap.height, BGRA, true);
-				texture.uploadFromBitmapData(bitmap);
+			// GPU caching made by Raltyro
+			if (gpu && ClientPrefs.cacheOnGPU && bitmap.image != null) {
+				bitmap.lock();
+				if (bitmap.__texture == null)
+				{
+					bitmap.image.premultiplied = true;
+					bitmap.getTexture(FlxG.stage.context3D);
+				}
+				bitmap.getSurface();
+				bitmap.disposeImage();
 				bitmap.image.data = null;
-				bitmap.dispose();
-				bitmap = BitmapData.fromTexture(texture);
+				bitmap.image = null;
+				bitmap.readable = true;
 			}
 
 			newGraphic = FlxGraphic.fromBitmapData(bitmap, false, path, cache);
@@ -502,20 +470,17 @@ class Paths
 	inline public static function cacheGraphic(path:String):Null<FlxGraphic>
 		return getGraphic(path, true);
 
-	inline public static function imagePath(key:String):String
+	inline public static function imagePath(key:String, ?folder:String):String
 		return getPath('images/$key.$IMAGE_EXT');
 
 	inline public static function imageExists(key:String):Bool
 		return Paths.exists(imagePath(key));
 
-	inline static public function image(key:String, ?library:String, gpu:Bool = true):Null<FlxGraphic>
-		return returnGraphic(key, library, gpu);
-
-	public static function returnGraphic(key:String, ?library:String, gpu:Bool = true):Null<FlxGraphic>
+	public static function image(key:String, ?folder:String = null, allowGPU:Bool = true):Null<FlxGraphic>
 	{
-		var path:String = imagePath(key);
+		var path:String = imagePath(key, folder);
 
-		var graphic = getGraphic(path, gpu);
+		var graphic = getGraphic(path, true, allowGPU);
 		if (graphic==null && Main.showDebugTraces)
 			trace('bitmap "$key" => "$path" returned null.');
 
@@ -572,7 +537,7 @@ class Paths
 	}
 
 	public static inline function getFolderPath(folder:String = ""):String
-		return (folder == "") ? getPreloadPath() : mods(folder);
+		return (folder == "") ? getPreloadPath() : mods(folder) + "/";
 
 	////	
 	public static var currentModDirectory(default, set):String = '';
@@ -606,8 +571,10 @@ class Paths
 	public static var contentMetadata:Map<String, ContentMetadata> = [];
 
 	#if MODS_ALLOWED
+	public static final contentFolderName:String = 'content';
+
 	inline static public function mods(key:String = '')
-		return 'content/$key';
+		return '$contentFolderName/$key';
 
 	inline static public function getGlobalContent(){
 		return globalContent;
@@ -624,29 +591,41 @@ class Paths
 
 		return globalContent;
 	}
+
+	static public function _modPath(key:String, mod:String):String {
+		return contentDirectories.get(mod) + '/' + key;
+	}
+
+	static public function modPath(key:String, mod:String):Null<String> {
+		if (contentDirectories.exists(mod)) {
+			var path:String = _modPath(key, mod);
+			if (exists(path)) return path;
+		}
+		return null;
+	}
 	
 	static public function modFolders(key:String, ignoreGlobal:Bool = false)
 	{
-		var shitToCheck:Array<String> = [];
-		if (Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
-			shitToCheck.push(Paths.currentModDirectory);
+		var path:Null<String> = null;
 
-		for (mod in dependencies)
-			shitToCheck.push(mod);
+		inline function check(mod:String) {
+			path = modPath(key, mod);
+		}
 
-		if (shitToCheck.length > 0) {
-			for (shit in shitToCheck){
-				var fileToCheck:String = contentDirectories.get(shit) + '/' + key;
-				if (exists(fileToCheck))
-					return fileToCheck;
-			}
+		if (Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0) {
+			check(Paths.currentModDirectory);
+			if (path != null) return path;
+		}
+
+		for (mod in dependencies) {
+			check(mod);
+			if (path != null) return path;
 		}
 
 		if (ignoreGlobal != true) {
 			for (mod in getGlobalContent()) {
-				var fileToCheck:String = contentDirectories.get(mod) + '/' + key;
-				if (exists(fileToCheck))
-					return fileToCheck;
+				check(mod);
+				if (path != null) return path;
 			}
 		}
 
@@ -661,10 +640,10 @@ class Paths
 		contentMetadata.clear();
 
 		contentDirectories.clear();
-		contentDirectories.set('', 'content');
+		contentDirectories.set('', contentFolderName);
 
-		iterateDirectory('content', (folderName) -> {
-			var folderPath = 'content/$folderName';
+		iterateDirectory(contentFolderName, (folderName) -> {
+			var folderPath = '$contentFolderName/$folderName';
 
 			if (isDirectory(folderPath) && !list.contains(folderName))
 			{
@@ -674,7 +653,11 @@ class Paths
 				var rawJson:Null<String> = Paths.getContent('$folderPath/metadata.json');
 				if (rawJson != null && rawJson.length > 0) {
 					var data:Dynamic = Json.parse(rawJson);
+					#if ALLOW_DEPRECATION
 					contentMetadata.set(folderName, updateContentMetadataStructure(data));
+					#else
+					contentMetadata.set(folderName, data);
+					#end
 					return;
 				}
 			}
@@ -683,16 +666,44 @@ class Paths
 	
 	inline static function updateContentMetadataStructure(data:Dynamic):ContentMetadata
 	{
-		if (Reflect.field(data, "weeks") != null)
-			return data; // You are valid :)
+		inline function getFreeplaySongs():Array<String> {
+			var list:Array<String> = [];
+			
+			var fs:Dynamic = Reflect.field(data, "freeplaySongs");
+			if (fs is Array) {
+				var fs:Array<Dynamic> = cast fs;
+				
+				if (fs.length == 0) {
+					// none
+				}else if (fs[0] is String) {
+					for (s in fs) list.push(Std.string(s));
+				}
+				else if (Reflect.isObject(fs[0])) {
+					for (s in fs) {
+						var v = Reflect.field(s, "name");
+						if (v != null) list.push(Std.string(v));
+					}
+				}
+			}
+			
+			return list;
+		}
 
-		var chapters:Dynamic = Reflect.field(data, "chapters");
-		if (chapters != null) { // TGT
-			Reflect.setField(data, "weeks", chapters);
+		if (Reflect.hasField(data, "freeplaySongs"))
+			Reflect.setField(data, "freeplaySongs", getFreeplaySongs());
+		else
+			Reflect.setField(data, "freeplaySongs", []);
+
+		////
+		if (Reflect.field(data, "weeks") != null)
+			return data; // valid ig
+
+		if (Reflect.hasField(data, "chapters")) { // TGT
+			Reflect.setField(data, "weeks", Reflect.field(data, "chapters"));
 			Reflect.deleteField(data, "chapters");
 			return data;
-		}else { // Lets assume it's an old TGT metadata
-			return {weeks: [data]};
+		}else {
+			return {};
 		}
 	}
 
@@ -772,11 +783,8 @@ class Paths
 	public static inline function hasString(key:String):Bool
 		return currentStrings.exists(key);
 
-	public static inline function _getString(key:String):Null<String>
+	public static inline function getString(key:String):Null<String>
 		return currentStrings.get(key);
-
-	public static inline function getString(key:String, ?defaultValue:String):String
-		return hasString(key) ? _getString(key) : (defaultValue==null ? key : defaultValue);
 }
 
 class HTML5Paths {
@@ -866,24 +874,6 @@ class HTML5Paths {
 	#end
 }
 
-typedef FreeplaySongMetadata = {
-	/**
-		Name of the song to be played
-	**/
-	var name:String;
-
-	/**
-		Category ID for the song to be placed into (main, side, remix)
-	**/
-	var category:String;
-
-	/**
-		Displayed name of the song.
-		Does not have to be the same as name.
-	**/
-	@:optional var displayName:String;
-}
-
 typedef FreeplayCategoryMetadata = {
 	/**
 		Displayed Name of the category
@@ -901,11 +891,6 @@ typedef FreeplayCategoryMetadata = {
 
 typedef ContentMetadata = {
 	/**
-		Weeks to be added to the story mode
-	**/
-	var weeks:Array<funkin.data.WeekData.WeekMetadata>;
-	
-	/**
 		Content that will load before this content.
 	**/
 	@:optional var dependencies:Array<String>;
@@ -918,7 +903,7 @@ typedef ContentMetadata = {
 	/**
 		Songs to be placed into the freeplay menu
 	**/
-	@:optional var freeplaySongs:Array<FreeplaySongMetadata>;
+	@:optional var freeplaySongs:Array<String>;
 
 	/**
 		Categories to be placed into the freeplay menu

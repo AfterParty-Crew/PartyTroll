@@ -1,9 +1,11 @@
 package;
 
+import haxe.io.Path;
 import haxe.CallStack;
 import openfl.display.Sprite;
 import openfl.display.FPS;
 import lime.app.Application;
+import lime.graphics.Image;
 import flixel.FlxG;
 import flixel.FlxState;
 
@@ -55,6 +57,7 @@ class Main extends Sprite
 	public static var recentRelease:Release;
 
 	////
+	public static var game:FNFGame;
 	public static var fpsVar:FPS;
 	public static var bread:Bread;
 
@@ -65,9 +68,40 @@ class Main extends Sprite
 	#end
 
 	////
+
+	#if desktop
+	// stolen from psych engine lol
+	static function __init__(){
+		var configPath:String = Path.directory(Path.withoutExtension(#if hl Sys.getCwd() #else Sys.programPath() #end));
+
+		#if windows
+		configPath += "/alsoft.ini";
+		#elseif mac
+		configPath = Path.directory(configPath) + "/Resources/alsoft.conf";
+		#elseif linux
+		configPath += "/alsoft.conf";
+		#end
+
+		Sys.putEnv("ALSOFT_CONF", configPath);
+	}
+	#end
+
 	public function new() {
 		super();
 
+		#if (windows && cpp)
+		funkin.api.Darkfriend.setDarkMode(!funkin.api.Darkfriend.isLightTheme());
+		#end
+
+		#if linux
+		stage.window.setIcon(Image.fromFile("icon.png"));
+		#end
+
+		#if hxvlc
+		hxvlc.util.Handle.init(["--no-audio-time-stretch"]); // Makes it so videos when slowed/sped up have their audio pitch up/down
+		// imo better than with time stretch but remove if thats what u prefer lol
+		#end
+				
 		////
 		#if sys
 		var args = Sys.args();
@@ -76,11 +110,6 @@ class Main extends Sprite
 			switch(arg) {
 				case "traceSowy":
 					trace("sowy");
-
-				case "troll":
-					#if tgt
-					initialState = funkin.tgt.SinnerState;
-					#end
 
 				case "songselect":
 					nextState = funkin.states.SongSelectState;
@@ -104,12 +133,12 @@ class Main extends Sprite
 		}
 		#end
 
-		final screenWidth = Application.current.window.width;
-		final screenHeight = Application.current.window.height;
+		final screenWidth = stage.window.display.bounds.width;
+		final screenHeight = stage.window.display.bounds.height;
 
 		if (adjustGameSize) {
 			//// Readjust the game size for smaller screens
-			if (!(screenWidth > gameWidth || screenHeight > gameWidth)) {
+			if (screenWidth < gameWidth && screenHeight < gameWidth) {
 				var ratioX:Float = screenWidth / gameWidth;
 				var ratioY:Float = screenHeight / gameHeight;
 				
@@ -119,24 +148,27 @@ class Main extends Sprite
 			}
 		}
 
-		//// Adjust window size for larger screens
-		var scaleModifier:Int = Math.floor((screenWidth > screenHeight) ? (screenHeight / gameHeight) : (screenWidth / gameWidth));
-		if (scaleModifier < 1) scaleModifier = 1;
+		//// Scale window size for larger screens
+		var scaleModifier:Float = (screenWidth > screenHeight) ? ((screenHeight - 96) / gameHeight) : (screenWidth / gameWidth);
+		if (scaleModifier > 1) {
+			var scaleModifier = Math.floor(scaleModifier);
+			resizeWindow(gameWidth * scaleModifier, gameHeight * scaleModifier);
+		}else 
+			scaleWindow(scaleModifier);
 
-		resizeWindow(gameWidth * scaleModifier, gameHeight * scaleModifier);
 		centerWindow();
 
 		////		
 		StartupState.nextState = nextState;
 
-		var game = new FNFGame(gameWidth, gameHeight, initialState, framerate, framerate, skipSplash, startFullscreen);
+		game = new FNFGame(gameWidth, gameHeight, initialState, framerate, framerate, skipSplash, startFullscreen);
 		addChild(game);
 
 		fpsVar = new FPS(10, 3, 0xFFFFFF);
 		fpsVar.visible = false;
 		addChild(fpsVar);
 
-		#if BREAD_ALLOWED
+		#if FUNNY_ALLOWED
 		bread = new Bread();
 		bread.visible = false;
 		addChild(bread);
@@ -167,6 +199,13 @@ class Main extends Sprite
 		Application.current.window.move(
 			Std.int((Application.current.window.display.bounds.width - Application.current.window.width) / 2),
 			Std.int((Application.current.window.display.bounds.height - Application.current.window.height) / 2)
+		);
+	}
+
+	public static function scaleWindow(scale:Float) {
+		Application.current.window.resize(
+			Math.floor(Application.current.window.display.bounds.width * scale), 
+			Math.floor(Application.current.window.display.bounds.height * scale)
 		);
 	}
 

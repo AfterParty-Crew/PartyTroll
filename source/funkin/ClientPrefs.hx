@@ -2,28 +2,22 @@ package funkin;
 
 #if !macro
 import Main.Version;
-
-import funkin.input.Controls.KeyboardScheme;
-import flixel.util.FlxSave;
+import funkin.input.Controls;
 import flixel.input.keyboard.FlxKey;
 import flixel.input.gamepad.FlxGamepadInputID;
-
+import flixel.util.FlxSave;
 #if DISCORD_ALLOWED
 import funkin.api.Discord.DiscordClient;
 #end
-
 #end
-
-enum OptionType
-{
+enum OptionType {
 	Toggle;
 	Dropdown;
 	Number;
 	Button;
 }
 
-typedef OptionData =
-{
+typedef OptionData = {
 	display:String,
 	desc:String,
 	type:OptionType,
@@ -34,8 +28,7 @@ typedef OptionData =
 #if !macro
 @:build(funkin.macros.OptionMacro.build())
 #end
-class ClientPrefs
-{
+class ClientPrefs {
 	#if !USE_EPIC_JUDGEMENT
 	public static inline final useEpics:Bool = false;
 	public static inline final epicWindow:Float = -1;
@@ -52,13 +45,11 @@ class ClientPrefs
 		* For example:
 		// public static inline final directionalCam = false;
 		// public static inline final ghostTapping = false;
-	*/
-
+	 */
 	static var defaultOptionDefinitions = getOptionDefinitions();
-	static var manualLoads = ["gameplaySettings", "quantHSV", "arrowHSV", "comboOffset","ratingPlacement"];
+	static var manualLoads = ["gameplaySettings", "quantHSV", "arrowHSV", "comboOffset", "ratingPlacement"];
 
-	inline public static function getOptionDefinitions():Map<String, OptionData>
-	{
+	inline public static function getOptionDefinitions():Map<String, OptionData> {
 		return [
 			// gameplay
 			"controllerMode" => {
@@ -89,6 +80,13 @@ class ClientPrefs
 				value: false,
 				data: []
 			},
+			"fish" => {
+				display: "Giant Fucking Fish",
+				desc: "When toggled, a giant fucking fish appears that covers the game if you get 100% accuracy",
+				type: Toggle,
+				value: false,
+				data: []
+			},
 			"judgePreset" => {
 				display: "Judgement Preset",
 				desc: "Preset for the judgement windows.",
@@ -98,12 +96,11 @@ class ClientPrefs
 				data: [
 					"requiresRestart" => true,
 					"options" => [
-						"Traditional", 
-						"V-Slice", 
+						"V-Slice",
 						#if USE_EPIC_JUDGEMENT "PBot", #end
-						"Week 7", 
-						"Standard", 
-						"ITG", 
+						"Week 7",
+						"Standard",
+						"ITG",
 						"Custom"
 					]
 				]
@@ -115,7 +112,7 @@ class ClientPrefs
 				value: "J4",
 				data: [
 					"requiresRestart" => true,
-					"options" => ["J1","J2","J3","J4","J5","J6","J7","J8","JUSTICE"]
+					"options" => ["J1", "J2", "J3", "J4", "J5", "J6", "J7", "J8", "JUSTICE"]
 				]
 			},
 			"noteOffset" => {
@@ -125,10 +122,10 @@ class ClientPrefs
 				value: 0,
 				data: [
 					"requiresRestart" => true,
-					"min" => -1000, 
-					"max" => 1000, 
+					"min" => -1000,
+					"max" => 1000,
 					"step" => 1,
-					"suffix" => "ms" 
+					"suffix" => "ms"
 				]
 			},
 			"ratingOffset" => {
@@ -138,8 +135,8 @@ class ClientPrefs
 				value: 0,
 				data: [
 					"requiresRestart" => true,
-					"min" => -100, 
-					"max" => 100, 
+					"min" => -100,
+					"max" => 100,
 					"step" => 1,
 					"suffix" => "ms"
 				]
@@ -261,7 +258,7 @@ class ClientPrefs
 				display: "Sync Mode",
 				desc: "The method used to sync the music to the game.\nOnly touch this if your game is going off-sync.",
 				type: Dropdown,
-				value: "Last Mix",
+				value: "System Time",
 				data: ["options" => ["System Time", "Last Mix", "Psych 1.0", "Direct", "Legacy"]]
 			},
 			// UI
@@ -270,7 +267,9 @@ class ClientPrefs
 				desc: "How to display the time bar",
 				type: Dropdown,
 				value: "Time Left",
-				data: ["options" => ["Time Left", "Time Elapsed", "Percentage", "Song Name", "Disabled"]]
+				data: [
+					"options" => ["Time Left", "Time Elapsed", "Percentage", "Song Name", "Disabled"]
+				]
 			},
 			"hudOpacity" => {
 				display: "HUD Opacity",
@@ -290,13 +289,7 @@ class ClientPrefs
 				desc: "How visible the judgement, combo and timing displays should be. 100% is fully visible and 0% is invisible.",
 				type: Number,
 				value: 1,
-				data: [
-					"suffix" => "%",
-					"min" => 0,
-					"max" => 100,
-					"step" => 1,
-					"type" => "percent"
-				]
+				data: ["suffix" => "%", "min" => 0, "max" => 100, "step" => 1, "type" => "percent"]
 			},
 			"hpOpacity" => {
 				display: "Health Bar Opacity",
@@ -375,19 +368,15 @@ class ClientPrefs
 				desc: "How many times each hold note should be subdivided. Higher numbers means more lag, but smoother holds.\nIf your PC is on the lower end, try to keep it below 8!",
 				type: Number,
 				value: 6,
-				data: [
-					"min" => 1,
-					"max" => 16,
-					"step" => 1
-				]
+				data: ["min" => 1, "max" => 16, "step" => 1]
 			},
-/* 			"optimizeHolds" => {
+			/* 			"optimizeHolds" => {
 				display: "Optimize Holds",
 				desc: "When toggled, hold notes will be less accurate, but they'll use less calls and thus less lag.",
 				type: Toggle,
 				value: true,
 				data: []
-			}, */
+			},*/
 			"downScroll" => {
 				display: "Downscroll",
 				desc: "When toggled, notes will move from top to bottom instead of bottom to top.",
@@ -395,26 +384,28 @@ class ClientPrefs
 				value: false,
 				data: []
 			},
-			"midScroll" => {
+			#if FUNNY_ALLOWED
+			"middleScroll" => {
 				display: "Middlescroll",
-				desc: "When toggled, notes will be centered.",
+				desc: "When toggled, notes will move towards the center of the screen.",
 				type: Toggle,
 				value: false,
-				data: [#if !tgt "recommendsRestart" => true #end]
+				data: []
+			},
+			#end
+			"centerNotefield" => {
+				display: "Centered Notefield",
+				desc: "When toggled, the player's notefield will be centered horizontally on the screen.",
+				type: Toggle,
+				value: false,
+				data: ["recommendsRestart" => true]
 			},
 			"accuracyCalc" => {
 				display: "Accuracy Calculation",
 				desc: "The method used to calculate your song accuracy. Wife3 is Etterna's and PBot is V-Slice's.",
 				type: Dropdown,
 				value: "Judgement",
-				data: [
-					"options" => [
-						"Simple",
-						"Judgement",
-						"Wife3",
-						"PBot"
-					]
-				]
+				data: ["options" => ["Simple", "Judgement", "Wife3", "PBot"]]
 			},
 			"showWifeScore" => {
 				display: "Accuracy Score Display",
@@ -486,9 +477,9 @@ class ClientPrefs
 				data: [
 					"recommendsRestart" => true,
 					// Default exists so that mods can tell if they're allowed to fuck w/ the HUD or not
-					// In Vanilla Troll use it just defaults to Psych
+					// In Vanilla Troll use it just defaults to Psych (called Traditional now)
 					// Mods can choose to not honour it but I think they should, generally
-					"options" => ["Default", "Psych", "Advanced", "Classic", "Kade"]
+					"options" => ["Default", "Traditional", "Advanced", "Classic", "Kade"]
 				]
 			},
 
@@ -497,36 +488,28 @@ class ClientPrefs
 				desc: "How to display the judgement counters.",
 				type: Dropdown,
 				value: "Off",
-				data: [
-					"recommendsRestart" => true,
-					"options" => ["Off", "Shortened", "Full"]
-				]
+				data: ["recommendsRestart" => true, "options" => ["Off", "Shortened", "Full"]]
 			},
 			"botplayMarker" => {
 				display: "Botplay Mark",
 				desc: "How to display the Botplay mark.",
 				type: Dropdown,
-				value: "Psych",
-				data: [
-					"options" => ["Hidden", "Subtle", "Psych"]
-				],
+				value: "Obvious",
+				data: ["options" => ["Hidden", "Subtle", "Obvious"]], // changed from Psych to Obvious because of stuff like KE Hud where it has its own obvious Botplay shit
 			},
 			"hudPosition" => {
 				display: "HUD Position",
 				desc: "Where to position HUD elements.",
 				type: Dropdown,
 				value: "Left",
-				data: [
-					"recommendsRestart" => true, 
-					"options" => ["Left", "Right"]
-				]
+				data: ["recommendsRestart" => true, "options" => ["Left", "Right"]]
 			},
 			//// judgement-related (gameplay)
 			"useEpics" => {
 				display: "Use Epics",
 				desc: "When toggled, epics will be used as the highest judgement.",
 				type: Toggle,
-				value: false,
+				value: true,
 				data: ["requiresRestart" => true]
 			},
 			"epicWindow" => {
@@ -534,35 +517,65 @@ class ClientPrefs
 				desc: "The hit window to hit an Epic judgement.",
 				type: Number,
 				value: 22,
-				data: ["requiresRestart" => true, "suffix" => "ms", "min" => 0, "max" => 200, "step" => 0.1]
+				data: [
+					"requiresRestart" => true,
+					"suffix" => "ms",
+					"min" => 0,
+					"max" => 200,
+					"step" => 0.1
+				]
 			},
 			"sickWindow" => {
 				display: "Sick Window",
 				desc: "The hit window to hit a Sick judgement.",
 				type: Number,
 				value: 45,
-				data: ["requiresRestart" => true, "suffix" => "ms", "min" => 0, "max" => 200, "step" => 0.1]
+				data: [
+					"requiresRestart" => true,
+					"suffix" => "ms",
+					"min" => 0,
+					"max" => 200,
+					"step" => 0.1
+				]
 			},
 			"goodWindow" => {
 				display: "Good Window",
 				desc: "The hit window to hit a Good judgement.",
 				type: Number,
 				value: 90,
-				data: ["requiresRestart" => true, "suffix" => "ms", "min" => 0, "max" => 200, "step" => 0.1]
+				data: [
+					"requiresRestart" => true,
+					"suffix" => "ms",
+					"min" => 0,
+					"max" => 200,
+					"step" => 0.1
+				]
 			},
 			"badWindow" => {
 				display: "Bad Window",
 				desc: "The hit window to hit a Bad judgement.",
 				type: Number,
 				value: 135,
-				data: ["requiresRestart" => true, "suffix" => "ms", "min" => 0, "max" => 200, "step" => 0.1]
+				data: [
+					"requiresRestart" => true,
+					"suffix" => "ms",
+					"min" => 0,
+					"max" => 200,
+					"step" => 0.1
+				]
 			},
 			"hitWindow" => {
 				display: "Max Hit Window",
 				desc: "The hit window to hit notes at all",
 				type: Number,
 				value: 180,
-				data: ["requiresRestart" => true, "suffix" => "ms", "min" => 0, "max" => 200, "step" => 0.1]
+				data: [
+					"requiresRestart" => true,
+					"suffix" => "ms",
+					"min" => 0,
+					"max" => 200,
+					"step" => 0.1
+				]
 			},
 
 			////
@@ -585,24 +598,36 @@ class ClientPrefs
 				desc: "Changes which shaders can load.",
 				type: Dropdown,
 				value: "All",
-				data: [
-					"recommendsRestart" => true,
-					"options" => ["All", "Minimal", "None"]
-				]
+				data: ["recommendsRestart" => true, "options" => ["All", "Minimal", "None"]]
 			},
 			"showFPS" => {
 				display: "Show FPS",
 				desc: "When toggled, an FPS counter is showed in the top left.",
 				type: Toggle,
+				value: false,
+				data: []
+			},
+			"showMemory" => {
+				display: "Show Memory",
+				desc: "When toggled, a memory counter is showed in the top left.",
+				type: Toggle,
+				value: false,
+				data: []
+			},
+			"fpsBG" => {
+				display: "FPS Background",
+				desc: "When toggled, the FPS counter has a background.",
+				type: Toggle,
 				value: true,
 				data: []
 			},
 			"framerate" => {
-				display: "Max Framerate",
-				desc: "The highest framerate the game can hit.",
-				type: Number,
-				value: #if (!macro && !linux) FlxG.stage!=null ? FlxG.stage.application.window.displayMode.refreshRate : #end 60,
-				data: ["suffix" => " FPS", "min" => 5, "max" => 360, "step" => 1,]
+				display:"Max Framerate",
+				desc:"The highest framerate the game can hit.",
+				type:Number,
+				value:#if !macro FlxG.stage != null ? FlxG.stage.application.window.displayMode.refreshRate : #end
+				60,
+				data:["suffix" => " FPS", "min" => 5, "max" => 360, "step" => 1,]
 			},
 			"lowQuality" => {
 				display: "Low Quality",
@@ -618,6 +643,13 @@ class ClientPrefs
 				value: true,
 				data: []
 			},
+			"cacheOnGPU" => {
+				display: "GPU Caching",
+				desc: "When toggled, allows the GPU to be used for caching images.\nDon't turn this on if you have a shitty graphics card!",
+				type: Toggle,
+				value: false,
+				data: []
+			},
 			"multicoreLoading" => {
 				display: "Multicore Loading",
 				desc: "When toggled, multiple threads will be used for asset loading when possible.\nMay cause crashes, but speeds up load times.",
@@ -625,24 +657,16 @@ class ClientPrefs
 				value: false,
 				data: []
 			},
-			// Cache Shit
-			"cacheOnGPU" => {
-				display: "GPU Caching",
-				desc: "If checked, allows the GPU to be used for caching textures, decreasing RAM usage.\nDon't turn this on if you have a shitty Graphics Card.",
-				type: Toggle,
-				value: false,
-				data: []
-			},
 			/*
-			"modcharts" => {
-				display: "Modcharts",
-				desc: "When toggled, modcharts will be used on some songs.\nWARNING: Disabling modcharts on modcharted songs will disable scoring!",
-				type: Toggle,
-				value: true,
-				data: ["requiresRestart" => true]
-			},
-			*/
-			#if tgt
+				"modcharts" => {
+					display: "Modcharts",
+					desc: "When toggled, modcharts will be used on some songs.\nWARNING: Disabling modcharts on modcharted songs will disable scoring!",
+					type: Toggle,
+					value: true,
+					data: ["requiresRestart" => true]
+				},
+			 */
+			#if FUNNY_ALLOWED
 			"ruin" => {
 				display: "Ruin The Mod",
 				desc: "Makes the mod really good! improves the mod alot!! the name is a joke guys it makes the mod REALLY REALLY good its not blammed lights i swear",
@@ -688,6 +712,7 @@ class ClientPrefs
 				value: true,
 				data: []
 			}
+
 		];
 	}
 
@@ -718,8 +743,7 @@ class ClientPrefs
 		'noDropPenalty' => false,
 	];
 
-	inline public static function getGameplaySetting(name:String, defaultValue:Dynamic):Dynamic
-	{
+	inline public static function getGameplaySetting(name:String, defaultValue:Dynamic):Dynamic {
 		return (gameplaySettings.exists(name) ? gameplaySettings.get(name) : defaultValue);
 	}
 
@@ -746,9 +770,9 @@ class ClientPrefs
 	 * [4] and [5] for miliseconds.
 	**/
 	public static var comboOffset:Array<Int> = [
-		-60, 60, 
+		 -60,  60,
 		-260, -80,
-		 0, 0
+		   0,   0
 	];
 
 	public static var ratingPlacement:Array<Float> = [
@@ -785,64 +809,67 @@ class ClientPrefs
 		'botplay' => [F8, NONE]
 	];
 	public static var buttonBinds:Map<String, Array<FlxGamepadInputID>> = [
-		'note_left'	=> [X, DPAD_LEFT],
-		'note_down'	=> [A, DPAD_DOWN],
-		'note_up'	=> [Y, DPAD_UP],
-		'note_right'=> [B, DPAD_RIGHT],
-
-		/*
+		'note_left' => [X, DPAD_LEFT],
+		'note_down' => [A, DPAD_DOWN],
+		'note_up' => [Y, DPAD_UP],
+		'note_right' => [B, DPAD_RIGHT],
+		
 		'dodge' => [],
 
-		'pause' => [],
+		'pause' => [START],
 		'reset' => [],
 
 		'ui_left' => [DPAD_LEFT],
 		'ui_down' => [DPAD_DOWN],
 		'ui_up' => [DPAD_UP],
 		'ui_right' => [DPAD_RIGHT],
-		
+
 		'accept' => [A],
 		'back' => [B],
-		*/
 	];
 	public static var defaultKeys:Map<String, Array<FlxKey>> = null;
 	public static var defaultButtons:Map<String, Array<FlxGamepadInputID>> = null;
 
-	public static function loadDefaultKeys()
-	{
+	public static function loadDefaultKeys() {
 		defaultKeys = keyBinds.copy();
 		defaultButtons = buttonBinds.copy();
 	}
 
 	static var optionSave:FlxSave = new FlxSave();
 
-	public static function initialize(){
-		defaultOptionDefinitions.get("framerate").value = #if linux 60 #else FlxG.stage.application.window.displayMode.refreshRate #end;
-		locale = openfl.system.Capabilities.language;
-		trace(locale);
+	public static function initialize() {
+		#if linux
+		defaultOptionDefinitions.get("framerate").value = funkin.api.Linux.getMonitorRefreshRate();
+		#else
+		defaultOptionDefinitions.get("framerate").value = FlxG.stage.application.window.displayMode.refreshRate;
+		#end
+		
+		// locale = openfl.system.Capabilities.language;
 
 		optionSave.bind("options_v2");
 		loadDefaultKeys();
-	}
-	
 
-	public static function save(?definitions:Map<String, OptionData>)
-	{
-		if (definitions != null)
-		{
-			for (key => val in definitions){
+		FlxG.sound.onVolumeChange.add(onVolumeChange);
+	}
+
+	private static function onVolumeChange(volume:Float) {
+		ClientPrefs.masterVolume = volume;
+		Reflect.setField(ClientPrefs.optionSave.data, "masterVolume", volume);
+		ClientPrefs.optionSave.flush();
+	}
+
+	public static function save(?definitions:Map<String, OptionData>) {
+		if (definitions != null) {
+			for (key => val in definitions) {
 				if (val.type == Number && val.data.exists("type") && val.data.get("type") == 'percent')
 					Reflect.setField(optionSave.data, key, val.value / 100);
 				else
 					Reflect.setField(optionSave.data, key, val.value);
-
 			}
-		}
-		else
+		} else
 			for (name in options)
 				Reflect.setField(optionSave.data, name, Reflect.field(ClientPrefs, name));
 
-		
 		// some dumb hardcoded saves
 		for (name in manualLoads)
 			Reflect.setField(optionSave.data, name, Reflect.field(ClientPrefs, name));
@@ -852,42 +879,37 @@ class ClientPrefs
 		saveBinds();
 	}
 
-	public static function saveBinds(){
+	public static function saveBinds() {
 		var save:FlxSave = new FlxSave();
 		save.bind('controls_v2'); // Placing this in a separate save so that it can be manually deleted without removing your Score and stuff
 		save.data.customControls = keyBinds;
 		save.close();
 	}
 
-	public static function loadBinds()
-	{
+	public static function loadBinds() {
 		var save:FlxSave = new FlxSave();
 		save.bind('controls_v2');
-		if (save != null && save.data.customControls != null)
-		{
+		if (save != null && save.data.customControls != null) {
 			var loadedControls:Map<String, Array<FlxKey>> = save.data.customControls;
 			for (control => keys in loadedControls)
-				keyBinds.set(control, keys);
+				keyBinds.set(control, keys.filter((key) -> key != NONE));
 
 			reloadControls();
 		}
 		save.destroy();
 	}
 
-	public static function load()
-	{
-		for (name in options){
-			if (Reflect.field(optionSave.data, name)!=null)
+	public static function load() {
+		for (name in options) {
+			if (Reflect.field(optionSave.data, name) != null)
 				Reflect.setField(ClientPrefs, name, Reflect.field(optionSave.data, name));
 			else
 				Reflect.setField(ClientPrefs, name, ClientPrefs.defaultOptionDefinitions.get(name).value);
 		}
 
-		if (optionSave.data.gameplaySettings != null)
-		{
+		if (optionSave.data.gameplaySettings != null) {
 			var savedMap:Map<String, Dynamic> = optionSave.data.gameplaySettings;
-			for (name => value in savedMap)
-			{
+			for (name => value in savedMap) {
 				gameplaySettings.set(name, value);
 			}
 		}
@@ -901,11 +923,16 @@ class ClientPrefs
 
 		Paths.locale = ClientPrefs.locale;
 
-		if (Main.fpsVar != null)
+		if (Main.fpsVar != null) {
 			Main.fpsVar.visible = ClientPrefs.showFPS;
+			Main.fpsVar.showMemory = ClientPrefs.showMemory;
+			Main.fpsVar.background = ClientPrefs.fpsBG;
+		}
 
+		#if FUNNY_ALLOWED
 		if (Main.bread != null)
 			Main.bread.visible = ClientPrefs.bread;
+		#end
 
 		FlxG.sound.volume = ClientPrefs.masterVolume;
 		FlxG.autoPause = ClientPrefs.autoPause;
@@ -914,16 +941,13 @@ class ClientPrefs
 		FlxG.stage.quality = ClientPrefs.globalAntialiasing ? BEST : LOW; // does nothing!!!!
 
 		#if DISCORD_ALLOWED
-		discordRPC ? DiscordClient.start() : DiscordClient.shutdown();	
+		discordRPC ? DiscordClient.start() : DiscordClient.shutdown();
 		#end
 
-		if (framerate > FlxG.drawFramerate)
-		{
+		if (framerate > FlxG.drawFramerate) {
 			FlxG.updateFramerate = Math.floor(framerate);
 			FlxG.drawFramerate = Math.floor(framerate);
-		}
-		else
-		{
+		} else {
 			FlxG.drawFramerate = Math.floor(framerate);
 			FlxG.updateFramerate = Math.floor(framerate);
 		}
@@ -931,26 +955,23 @@ class ClientPrefs
 		Main.downloadBetas = Version.isBeta || ClientPrefs.downloadBetas;
 	}
 
-	public static function reloadControls()
-	{
-		funkin.input.PlayerSettings.player1.controls.setKeyboardScheme(KeyboardScheme.Solo);
+	public static function reloadControls() {
+		Controls.firstActive.keyBinds = keyBinds;
+		Controls.firstActive.buttonBinds = buttonBinds;
 
-		StartupState.muteKeys = copyKey(keyBinds.get('volume_mute'));
-		StartupState.volumeDownKeys = copyKey(keyBinds.get('volume_down'));
-		StartupState.volumeUpKeys = copyKey(keyBinds.get('volume_up'));
-		StartupState.fullscreenKeys = copyKey(keyBinds.get("fullscreen"));
+		FNFGame.muteKeys = copyKey(keyBinds.get('volume_mute'));
+		FNFGame.volumeDownKeys = copyKey(keyBinds.get('volume_down'));
+		FNFGame.volumeUpKeys = copyKey(keyBinds.get('volume_up'));
+		FNFGame.fullscreenKeys = copyKey(keyBinds.get("fullscreen"));
 	}
 
-	public static function copyKey(arrayToCopy:Array<Int>):Array<Int>
-	{
+	public static function copyKey(arrayToCopy:Array<Int>):Array<Int> {
 		var copiedArray:Array<Int> = arrayToCopy.copy();
 		var i:Int = 0;
 		var len:Int = copiedArray.length;
 
-		while (i < len)
-		{
-			if (copiedArray[i] == NONE)
-			{
+		while (i < len) {
+			if (copiedArray[i] == NONE) {
 				copiedArray.remove(NONE);
 				--i;
 			}

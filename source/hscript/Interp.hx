@@ -32,22 +32,9 @@ private enum Stop {
 
 class Interp {
 
-	public var scriptObject(default, set):Dynamic;
-	public function set_scriptObject(v:Dynamic) {
-		__instanceFields = (v == null) ? [] : Type.getInstanceFields(Type.getClass(v));
-		return scriptObject = v;
-	}
-	var __instanceFields:Array<String> = [];
-	
-	#if haxe3
 	public var variables : Map<String,Dynamic>;
 	var locals : Map<String,{ r : Dynamic }>;
 	var binops : Map<String, Expr -> Expr -> Dynamic >;
-	#else
-	public var variables : Hash<Dynamic>;
-	var locals : Hash<{ r : Dynamic }>;
-	var binops : Hash< Expr -> Expr -> Dynamic >;
-	#end
 
 	var depth : Int;
 	var inTry : Bool;
@@ -58,24 +45,24 @@ class Interp {
 	var curExpr : Expr;
 	#end
 
+	public var parentObject:Dynamic;
+	private var parentObjectCls(get, default):Class<Dynamic>;
+	function get_parentObjectCls()
+	{
+		if (parentObject != null)
+			return Type.getClass(parentObject);
+		return null;
+	}
+
 	public function new() {
-		#if haxe3
 		locals = new Map();
-		#else
-		locals = new Hash();
-		#end
 		declared = new Array();
 		resetVariables();
 		initOps();
 	}
 
 	private function resetVariables(){
-		#if haxe3
 		variables = new Map<String,Dynamic>();
-		#else
-		variables = new Hash();
-		#end
-
 		variables.set("null",null);
 		variables.set("true",true);
 		variables.set("false",false);
@@ -97,11 +84,7 @@ class Interp {
 
 	function initOps() {
 		var me = this;
-		#if haxe3
 		binops = new Map();
-		#else
-		binops = new Hash();
-		#end
 		binops.set("+",function(e1,e2) return me.expr(e1) + me.expr(e2));
 		binops.set("-",function(e1,e2) return me.expr(e1) - me.expr(e2));
 		binops.set("*",function(e1,e2) return me.expr(e1) * me.expr(e2));
@@ -122,7 +105,9 @@ class Interp {
 		binops.set("||",function(e1,e2) return me.expr(e1) == true || me.expr(e2) == true);
 		binops.set("&&",function(e1,e2) return me.expr(e1) == true && me.expr(e2) == true);
 		binops.set("=",assign);
-		binops.set("...",function(e1,e2) return new #if (haxe_211 || haxe3) IntIterator #else IntIter #end(me.expr(e1),me.expr(e2)));
+		binops.set("...",function(e1,e2) return new IntIterator(me.expr(e1),me.expr(e2)));
+		binops.set("is",function(e1,e2) return #if (haxe_ver >= 4.2) Std.isOfType #else Std.is #end (me.expr(e1), me.expr(e2)));
+		binops.set("??",function(e1,e2) return me.expr(e1) ?? me.expr(e2));
 		assignOp("+=",function(v1:Dynamic,v2:Dynamic) return v1 + v2);
 		assignOp("-=",function(v1:Float,v2:Float) return v1 - v2);
 		assignOp("*=",function(v1:Float,v2:Float) return v1 * v2);
@@ -134,14 +119,19 @@ class Interp {
 		assignOp("<<=",function(v1,v2) return v1 << v2);
 		assignOp(">>=",function(v1,v2) return v1 >> v2);
 		assignOp(">>>=",function(v1,v2) return v1 >>> v2);
+		binops.set(#if cpp "??"+"=" #else "??=" #end, function(e1, e2) return me.exprAssignValue(e1, me.expr(e1) ?? me.expr(e2)));
 	}
 
 	function setVar( name : String, v : Dynamic ) {
 		variables.set(name, v);
+		return v;
 	}
 
 	function assign( e1 : Expr, e2 : Expr ) : Dynamic {
-		var v = expr(e2);
+		return exprAssignValue(e1, expr(e2));
+	}
+
+	function exprAssignValue( e1 : Expr, v : Dynamic ) : Dynamic {
 		switch( Tools.expr(e1) ) {
 		case EIdent(id):
 			var l = locals.get(id);
@@ -257,11 +247,7 @@ class Interp {
 
 	public function execute( expr : Expr ) : Dynamic {
 		depth = 0;
-		#if haxe3
 		locals = new Map();
-		#else
-		locals = new Hash();
-		#end
 		declared = new Array();
 		return exprReturn(expr);
 	}
@@ -282,12 +268,8 @@ class Interp {
 		return null;
 	}
 
-	function duplicate<T>( h : #if haxe3 Map < String, T > #else Hash<T> #end ) {
-		#if haxe3
+	function duplicate<T>( h : Map<String,T> ) {
 		var h2 = new Map();
-		#else
-		var h2 = new Hash();
-		#end
 		for( k in h.keys() )
 			h2.set(k,h.get(k));
 		return h2;
@@ -315,31 +297,29 @@ class Interp {
 	}
 
 	function resolve( id : String ) : Dynamic {
-		var l = locals.get(id);
-		if( l != null )
-			return l.r;
-		var v = variables.get(id);
-		if(variables.exists(id))
-			return v;
+		if(!variables.exists(id))
+		{
+			if (parentObject != null)
+			{
+				if (Reflect.hasField(parentObject, 'get_$id'))
+					return Reflect.getProperty(parentObject, 'get_$id')();
+				else if (Reflect.hasField(parentObject, id))
+					return Reflect.getProperty(parentObject, id);
+			}
 
-		
-		if (scriptObject != null) {
-			// search in object
-			if (id == "this") {
-				return scriptObject;
-			} else if ((Type.typeof(scriptObject) == TObject) && Reflect.hasField(scriptObject, id)) {
-				return Reflect.field(scriptObject, id);
-			} else {
-				if (__instanceFields.contains(id)) {
-					return Reflect.getProperty(scriptObject, id);
-				} else if (__instanceFields.contains('get_$id')) { // getter
-					return Reflect.getProperty(scriptObject, 'get_$id')();
-				}
+			if (parentObjectCls != null)
+			{
+				if (Reflect.hasField(parentObjectCls, 'get_$id'))
+					return Reflect.getProperty(parentObjectCls, 'get_$id')();
+				else if (Reflect.hasField(parentObjectCls, id))
+					return Reflect.getProperty(parentObjectCls, id);
 			}
 		}
+		else
+			return variables.get(id);
 
 		error(EUnknownVariable(id));
-		return v;
+		return null;
 	}
 
 	public function expr( e : Expr ) : Dynamic {
@@ -353,11 +333,11 @@ class Interp {
 			case CInt(v): return v;
 			case CFloat(f): return f;
 			case CString(s): return s;
-			#if !haxe3
-			case CInt32(v): return v;
-			#end
 			}
 		case EIdent(id):
+			var l = locals.get(id);
+			if( l != null )
+				return l.r;
 			return resolve(id);
 		case EVar(n,_,e):
 			declared.push({ n : n, old : locals.get(n) });
@@ -389,11 +369,7 @@ class Interp {
 			case "--":
 				return increment(e,prefix,-1);
 			case "~":
-				#if (neko && !haxe3)
-				return haxe.Int32.complement(expr(e));
-				#else
 				return ~expr(e);
-				#end
 			default:
 				error(EInvalidOp(op));
 			}
@@ -420,6 +396,18 @@ class Interp {
 			return null;
 		case EFor(v,it,e):
 			forLoop(v,it,e);
+			return null;
+		case EForGen(it,e):
+			Tools.getKeyIterator(it, function(vk,vv,it) {
+				if( vk == null ) {
+					#if hscriptPos
+					curExpr = it;
+					#end
+					error(ECustom("Invalid for expression"));
+					return;
+				}
+				forKeyValueLoop(vk,vv,it,e);
+			});
 			return null;
 		case EBreak:
 			throw SBreak;
@@ -470,6 +458,7 @@ class Interp {
 					try {
 						r = me.exprReturn(fexpr);
 					} catch( e : Dynamic ) {
+						restore(oldDecl);
 						me.locals = old;
 						me.depth = depth;
 						#if neko
@@ -500,56 +489,34 @@ class Interp {
 			}
 			return f;
 		case EArrayDecl(arr):
-			if (arr.length > 0 && Tools.expr(arr[0]).match(EBinop("=>", _))) {
-				var isAllString:Bool = true;
-				var isAllInt:Bool = true;
-				var isAllObject:Bool = true;
-				var isAllEnum:Bool = true;
-				var keys:Array<Dynamic> = [];
-				var values:Array<Dynamic> = [];
-				for (e in arr) {
+			if( arr.length > 0 && Tools.expr(arr[0]).match(EBinop("=>", _)) ) {
+				var keys = [];
+				var values = [];
+				for( e in arr ) {
 					switch(Tools.expr(e)) {
-						case EBinop("=>", eKey, eValue): {
-							var key:Dynamic = expr(eKey);
-							var value:Dynamic = expr(eValue);
-							isAllString = isAllString && (key is String);
-							isAllInt = isAllInt && (key is Int);
-							isAllObject = isAllObject && Reflect.isObject(key);
-							isAllEnum = isAllEnum && Reflect.isEnumValue(key);
-							keys.push(key);
-							values.push(value);
-						}
-						default: throw("=> expected");
+					case EBinop("=>", eKey, eValue):
+						keys.push(expr(eKey));
+						values.push(expr(eValue));
+					default:
+						#if hscriptPos
+						curExpr = e;
+						#end
+						error(ECustom("Invalid map key=>value expression"));
 					}
 				}
-				var map:Dynamic = {
-					if (isAllInt) new haxe.ds.IntMap<Dynamic>();
-					else if (isAllString) new haxe.ds.StringMap<Dynamic>();
-					else if (isAllEnum) new haxe.ds.EnumValueMap<Dynamic, Dynamic>();
-					else if (isAllObject) new haxe.ds.ObjectMap<Dynamic, Dynamic>();
-					else throw 'Inconsistent key types';
-				}
-				for (n in 0...keys.length) {
-					setMapValue(map, keys[n], values[n]);
-				}
-				return map;
-			}
-			else {
+				return makeMap(keys,values);
+			} else {
 				var a = new Array();
-				for ( e in arr ) {
+				for( e in arr )
 					a.push(expr(e));
-				}
 				return a;
 			}
 		case EArray(e, index):
 			var arr:Dynamic = expr(e);
 			var index:Dynamic = expr(index);
-			if (isMap(arr)) {
+			if( isMap(arr) )
 				return getMapValue(arr, index);
-			}
-			else {
-				return arr[index];
-			}
+			return arr[index];
 		case ENew(cl,params):
 			var a = new Array();
 			for( e in params )
@@ -608,115 +575,74 @@ class Interp {
 			return expr(e);
 		case ECheckType(e,_):
 			return expr(e);
-        case EImport(p, m):
-            // check if import is after a declaration
-            if (declared.length > 0){
+		case EImport(p, m):
+			// check if import is after a declaration
+			if (declared.length > 0){
 				error(EDeclaration);
-                return null;
-            }
+				return null;
+			}
 
-            // grab the package and field data
+			inline function startsUppercase(str:String) {
+				var beginning = str.charCodeAt(0);
+				return beginning >= 'A'.code && beginning <= 'Z'.code;
+			}
 
-            // packages can't begin with an uppercase, and modules cant begin with a lowercase. That makes it pppretty easy to split the module and package
-            // So we split it into 2 arrays: Module path and field(s)
-            // Module path is the package + module, and field(s) is just whatever properties to grab from the 
+			var className:Null<String> = null;
+			var fieldName:Null<String> = null;
 
-			var module:Array<String> = [];
-            var fields:Array<String> = [];
-
-            // and iterate through the path, adding the first uppercase thing + beyond to the module and the rest to the package
 			var path = p.split(".");
+			if (path.length > 1 && startsUppercase(path[path.length - 2])) {
+				fieldName = path.pop();
+				className = path[path.length - 1];
+			}else if (startsUppercase(path[path.length - 1])) {
+				className = path[path.length - 1];
+			}else {
+				error(EModuleUpper);
+				return null;
+			}
 
-            var navigatingModule:Bool = false;
-            for(file in path){
-				var beginning = file.charAt(0);
-				var uppercase = (beginning >= 'A' && beginning <= 'Z');
+			var classPath:String = path.join(".");
+			var aliasName:String;
 
-                if (navigatingModule)
-                    fields.push(file);
-                else
-                    module.push(file);
+			switch(m) {
+				case IAll:
+					var cl = Type.resolveClass(classPath);
+					if (cl == null) {
+						error(EInvalidType(classPath));
+						return null;
+					}
+					for (fieldName in Type.getClassFields(cl)) {
+						variables.set(fieldName, Reflect.getProperty(cl, fieldName));
+					}
+					return null;
 
-                if (uppercase)
-                    navigatingModule = true; // packages can never begin with an uppercase letter so if it begins with an uppercase then we're goin thru the module
-            }
-            
-
-            // now validate it is valid
-            switch(m){
-                case IAll:
-                    // this will never have an issue since the module name is *
-                default:
-                    // however this can be wrong
-					// module needs to start with an uppercase letter, so if it doesnt then we throw an error about it
-
-                    if(fields.length == 0){
-                        var beginning = module[module.length-1]; 
-						if (!(beginning >= 'A' && beginning <= 'Z')){
-                            error(EModuleUpper); // module name has to begin with an uppercase
-                            return null;
-                        }
-                    }
-
-            }
-
-
-            function getImport():Array<Dynamic>{
-                var moduleName = module[module.length - 1];
-                var fullModule:String = module.join(".");
-                if (fields.length == 0) {
-                    // this one's pretty easy, just grab the class
-                    var clEn:Dynamic = Type.resolveClass(fullModule);
-                    if (clEn == null)
-                        clEn = Type.resolveEnum(fullModule);
-
-					if (clEn != null)return [moduleName, clEn, false];
-
-                } else {
-                    if (fields.length > 1) { // This one's a bit trickier, but in the end its just a loop to grab it
-                        var cl:Dynamic = Type.resolveClass(fullModule);
-                        var prop:Dynamic = cl;
-                        var finalField = fields[fields.length - 1];
-                        while (prop != null && fields.length > 0) {
-                            var field = fields.shift();
-                            prop = Reflect.getProperty(prop, field);
-                        }
-                        return [finalField, prop, true];
-
-                    } else {
-                        var cl:Dynamic = Type.resolveClass(fullModule);
-                        var prop:Dynamic = Reflect.getProperty(cl, fields[0]);
-                        return [prop, cl, true];
-                    }
-                }
-                return [fullModule, null, false];
-
-            }
-            // And now we can get the thing(s) to be imported, and import it
-            switch(m){
-                case IAll:
-                    
-                case INormal:
-                    var importStuff = getImport();
-					if (importStuff.contains(null)){
-                        if(importStuff[2] == true)
-                            error(ECustom("no field or subtype " + importStuff[0]));
-                        else 
-							error(EInvalidType(importStuff[0]));
-                    }else
-					    variables.set(importStuff[0], importStuff[1]);
-                    
-					
-                case IAsName(alias):
-                    var importStuff = getImport();
-                    if (importStuff.contains(null)) {
-                        if (importStuff[2] == true)
-                            error(ECustom("no field or subtype " + importStuff[0]));
-                        else
-                            error(EInvalidType(importStuff[0]));
-                    } else variables.set(alias, importStuff[1]);
-            }
-            return null;
+				case IAsName(alias): aliasName = alias;
+				case INormal: aliasName = fieldName ?? className;
+			}
+			
+			if (fieldName != null) {
+				var cl = Type.resolveClass(classPath);
+				if (cl == null) {
+					error(EInvalidType(classPath));
+					return null;
+				}
+				if (!Type.getClassFields(cl).contains(fieldName)) {
+					error(ECustom('Class $classPath does not define field $fieldName'));
+					return null;
+				}
+				variables.set(aliasName, Reflect.getProperty(cl, fieldName));
+				
+			}else {
+				var clEn:Dynamic = Type.resolveClass(classPath);
+				if (clEn == null)
+					clEn = Type.resolveEnum(classPath);
+				if (clEn == null) {
+					error(EInvalidType(classPath));
+					return null;
+				}
+				variables.set(aliasName, clEn);
+			}
+			return null;
 		}
 		return null;
 	}
@@ -724,15 +650,8 @@ class Interp {
 	function doWhileLoop(econd,e) {
 		var old = declared.length;
 		do {
-			try {
-				expr(e);
-			} catch( err : Stop ) {
-				switch(err) {
-				case SContinue:
-				case SBreak: break;
-				case SReturn: throw err;
-				}
-			}
+			if( !loopRun(() -> expr(e)) )
+				break;
 		}
 		while( expr(econd) == true );
 		restore(old);
@@ -741,24 +660,33 @@ class Interp {
 	function whileLoop(econd,e) {
 		var old = declared.length;
 		while( expr(econd) == true ) {
-			try {
-				expr(e);
-			} catch( err : Stop ) {
-				switch(err) {
-				case SContinue:
-				case SBreak: break;
-				case SReturn: throw err;
-				}
-			}
+			if( !loopRun(() -> expr(e)) )
+				break;
 		}
 		restore(old);
 	}
 
 	function makeIterator( v : Dynamic ) : Iterator<Dynamic> {
-		#if ((flash && !flash9) || (php && !php7 && haxe_ver < '4.0.0'))
-		if ( v.iterator != null ) v = v.iterator();
+		#if js
+		// don't use try/catch (very slow)
+		if( v is Array )
+			return (v : Array<Dynamic>).iterator();
+		if( v.iterator != null ) v = v.iterator();
 		#else
 		if(v.iterator != null) try v = v.iterator() catch( e : Dynamic ) {};
+		#end
+		if( v.hasNext == null || v.next == null ) error(EInvalidIterator(v));
+		return v;
+	}
+
+	function makeKeyValueIterator( v : Dynamic ) : KeyValueIterator<Dynamic,Dynamic> {
+		#if js
+		// don't use try/catch (very slow)
+		if( v is Array )
+			return (v : Array<Dynamic>).keyValueIterator();
+		if( v.keyValueIterator != null ) v = v.keyValueIterator();
+		#else
+		try v = v.keyValueIterator() catch( e : Dynamic ) {};
 		#end
 		if( v.hasNext == null || v.next == null ) error(EInvalidIterator(v));
 		return v;
@@ -770,17 +698,41 @@ class Interp {
 		var it = makeIterator(expr(it));
 		while( it.hasNext() ) {
 			locals.set(n,{ r : it.next() });
-			try {
-				expr(e);
-			} catch( err : Stop ) {
-				switch( err ) {
-				case SContinue:
-				case SBreak: break;
-				case SReturn: throw err;
-				}
-			}
+			if( !loopRun(() -> expr(e)) )
+				break;
 		}
 		restore(old);
+	}
+
+	function forKeyValueLoop(vk,vv,it,e) {
+		var old = declared.length;
+		declared.push({ n : vk, old : locals.get(vk) });
+		declared.push({ n : vv, old : locals.get(vv) });
+		var it = makeKeyValueIterator(expr(it));
+		while( it.hasNext() ) {
+			var v = it.next();
+			locals.set(vk,{ r : v.key });
+			locals.set(vv,{ r : v.value });
+			if( !loopRun(() -> expr(e)) )
+				break;
+		}
+		restore(old);
+	}
+
+	inline function loopRun( f : Void -> Void ) {
+		var cont = true;
+		try {
+			f();
+		} catch( err : Stop ) {
+			switch( err ) {
+			case SContinue:
+			case SBreak:
+				cont = false;
+			case SReturn:
+				throw err;
+			}
+		}
+		return cont;
 	}
 
 	inline function isMap(o:Dynamic):Bool {
@@ -813,18 +765,58 @@ class Interp {
 		return cast extraData;
 	}
 
+	
+	function makeMap( keys : Array<Dynamic>, values : Array<Dynamic> ) : Dynamic {
+		var isAllString:Bool = true;
+		var isAllInt:Bool = true;
+		var isAllObject:Bool = true;
+		var isAllEnum:Bool = true;
+		for( key in keys ) {
+			isAllString = isAllString && (key is String);
+			isAllInt = isAllInt && (key is Int);
+			isAllObject = isAllObject && Reflect.isObject(key);
+			isAllEnum = isAllEnum && Reflect.isEnumValue(key);
+		}
+		if( isAllInt ) {
+			var m = new Map<Int,Dynamic>();
+			for( i => key in keys )
+				m.set(key, values[i]);
+			return m;
+		}
+		if( isAllString ) {
+			var m = new Map<String,Dynamic>();
+			for( i => key in keys )
+				m.set(key, values[i]);
+			return m;
+		}
+		if( isAllEnum ) {
+			var m = new haxe.ds.EnumValueMap<Dynamic,Dynamic>();
+			for( i => key in keys )
+				m.set(key, values[i]);
+			return m;
+		}
+		if( isAllObject ) {
+			var m = new Map<{},Dynamic>();
+			for( i => key in keys )
+				m.set(key, values[i]);
+			return m;
+		}
+		error(ECustom("Invalid map keys "+keys));
+		return null;
+	}
+
 	function get( o : Dynamic, f : String ) : Dynamic {
 		if ( o == null ) error(EInvalidAccess(f));
 		var c = Type.getClass(o);
-		var n = Type.getClassName(c);
-
-		var extraData:Null<Map<String, Dynamic>> = getExtraData(o, n);
-
-		if (extraData != null){
-			if (extraData.exists('get_$f'))
-				return extraData.get('get_$f')();
-			else if(extraData.exists(f))
-				return extraData.get(f);
+		if (c != null) {
+			var n = Type.getClassName(c);
+			var extraData:Null<Map<String, Dynamic>> = getExtraData(o, n);
+			if (extraData != null){
+				if (extraData.exists('get_$f'))
+					return extraData.get('get_$f')();
+				else if(extraData.exists(f))
+					return extraData.get(f);
+			}
 		}
 
 		return {
@@ -845,16 +837,16 @@ class Interp {
 		if( o == null ) error(EInvalidAccess(f));
 
 		var c = Type.getClass(o);
-		var n = Type.getClassName(c);
-
-		var extraData:Null<Map<String, Dynamic>> = getExtraData(o, n);
-
-		if (extraData != null) {
-			if (extraData.exists('set_$f'))
-				return extraData.get('set_$f')(v);
-			else if (extraData.exists(f)){
-				extraData.set(f, v);
-				return v;
+		if (c != null) {
+			var n = Type.getClassName(c);
+			var extraData:Null<Map<String, Dynamic>> = getExtraData(o, n);
+			if (extraData != null) {
+				if (extraData.exists('set_$f'))
+					return extraData.get('set_$f')(v);
+				else if (extraData.exists(f)){
+					extraData.set(f, v);
+					return v;
+				}
 			}
 		}
 

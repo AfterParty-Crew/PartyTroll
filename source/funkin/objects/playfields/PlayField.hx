@@ -7,7 +7,7 @@ import flixel.tweens.FlxEase;
 import lime.app.Event;
 import funkin.modchart.ModManager;
 import funkin.data.JudgmentManager;
-import funkin.data.JudgmentManager.Wife3;
+import funkin.objects.notes.*;
 import funkin.states.PlayState;
 import funkin.states.MusicBeatState;
 
@@ -91,7 +91,7 @@ class PlayField extends FlxTypedGroup<FlxBasic>
 	public var modNumber:Int = 0; // used for the mod manager. can be set to a different number to give it a different set of modifiers. can be set to 0 to sync the modifiers w/ bf's, and 1 to sync w/ the opponent's
 	public var isPlayer:Bool = false; // if this playfield takes input from the player
 	public var inControl:Bool = true; // if this playfield will take input at all
-	public var keyCount(default, set):Int = PlayState.keyCount; // How many lanes are in this field
+	public var keyCount(default, set):Int = 4; // How many lanes are in this field
 	public var autoPlayed(default, set):Bool = false; // if this playfield should be played automatically (botplay, opponent, etc)
 
 	public var x:Float = 0;
@@ -187,9 +187,10 @@ class PlayField extends FlxTypedGroup<FlxBasic>
 	public inline function getBaseX(direction:Int)
 		return baseXPositions[direction];
 	
-	public function new(modMgr:ModManager){
+	public function new(modMgr:ModManager, ?keyCount:Int){
 		super();
 		this.modManager = modMgr;
+		this.keyCount = keyCount == null ? PlayState.keyCount : keyCount;
 
 		grpNoteSplashes = new FlxTypedGroup<NoteSplash>();
 		add(grpNoteSplashes);
@@ -206,27 +207,6 @@ class PlayField extends FlxTypedGroup<FlxBasic>
 
 		////
 		noteField = new NoteField(this, modMgr);
-		//add(noteField);
-
-		// idk what haxeflixel does to regenerate the frames
-		// SO! this will be how we do it
-		// lil guy will sit here and regenerate the frames automatically
-		// idk why this seems to work but it does	
-		// TODO: figure out WHY this works
-		var retard:StrumNote = new StrumNote(400, 400, 0);
-		retard.playAnim("static");
-		retard.alpha = 1;
-		retard.visible = true;
-		retard.color = 0xFF000000; // just to make it a bit harder to see
-		retard.alpha = 0.9; // just to make it a bit harder to see
-		retard.scale.set(0.002, 0.002);
-		retard.handleRendering = true;
-		retard.updateHitbox();
-		retard.x = 400;
-		retard.y = 400;
-		@:privateAccess
-		retard.draw();
-		add(retard);
 	}
 
 	// queues a note to be spawned
@@ -235,7 +215,7 @@ class PlayField extends FlxTypedGroup<FlxBasic>
 			noteQueue[note.column] = [note];
 		else{
 			noteQueue[note.column].push(note);
-			noteQueue[note.column].sort((a, b) -> Std.int(a.strumTime - b.strumTime));
+			noteQueue[note.column].sort(sortNotesAscend);
 		}
 	}
 
@@ -245,7 +225,7 @@ class PlayField extends FlxTypedGroup<FlxBasic>
 		if (noteQueue[note.column] == null)
 			noteQueue[note.column] = [];
 		noteQueue[note.column].remove(note);
-		noteQueue[note.column].sort((a, b) -> Std.int(a.strumTime - b.strumTime));
+		noteQueue[note.column].sort(sortNotesAscend);
 	}
 
 	// destroys a note
@@ -282,7 +262,7 @@ class PlayField extends FlxTypedGroup<FlxBasic>
 			daNote.parent.unhitTail.remove(daNote); 
 
 		if (noteQueue[daNote.column] != null)
-			noteQueue[daNote.column].sort((a, b) -> Std.int(a.strumTime - b.strumTime));
+			noteQueue[daNote.column].sort(sortNotesAscend);
 		remove(daNote);
 		daNote.destroy();
 	}
@@ -294,7 +274,7 @@ class PlayField extends FlxTypedGroup<FlxBasic>
 		
 		if (noteQueue[note.column]!=null){
 			noteQueue[note.column].remove(note);
-			noteQueue[note.column].sort((a, b) -> Std.int(a.strumTime - b.strumTime));
+			noteQueue[note.column].sort(sortNotesAscend);
 		}
 
 		if (spawnedByData[note.column] != null)
@@ -346,12 +326,15 @@ class PlayField extends FlxTypedGroup<FlxBasic>
 		return spawnedNotes.contains(note) || noteQueue[note.column]!=null && noteQueue[note.column].contains(note);
 	
 	// sends an input to the playfield
-	public function input(data:Int):Null<Note> {
+	public function input(data:Int, ?hitTime:Float):Null<Note> {
 		if (data < 0 || data > keyCount) 
 			return null;
 
+		hitTime ??= Conductor.getAccPosition();
+
 		var noteList = getTapNotes(data, (note:Note) -> !note.tooLate);
-		noteList.sort((a, b) -> Std.int(b.strumTime - a.strumTime)); // so lowPriority actually works (even though i hate it lol!)
+		noteList.sort(sortNotesDescend); // so lowPriority actually works (even though i hate it lol!)
+
 		var recentHold:Null<Note> = null;
 
 		while (noteList.length > 0)
@@ -363,10 +346,10 @@ class PlayField extends FlxTypedGroup<FlxBasic>
 			else{
 				if (note.wasGoodHit)
 					continue;
-				var judge:Judgment = judgeManager.judgeNote(note);
+				var judge:Judgment = judgeManager.judgeNote(note, hitTime);
 				if (judge != UNJUDGED){
 					note.hitResult.judgment = judge;
-					note.hitResult.hitDiff = note.strumTime - Conductor.getAccPosition();
+					note.hitResult.hitDiff = hitTime - note.strumTime;
 					noteHitCallback(note, this);
 					return note;
 				}
@@ -405,7 +388,7 @@ class PlayField extends FlxTypedGroup<FlxBasic>
 				babyArrow.alpha = 0;
 				var daY = babyArrow.downScroll ? -10 : 10;
 				babyArrow.offsetY -= daY;
-				FlxTween.tween(babyArrow, {offsetY: babyArrow.offsetY + daY, alpha: 1}, 1, {ease: FlxEase.circOut, startDelay: 0.5 + (Conductor.crochet / 1000) * data});
+				FlxTween.tween(babyArrow, {offsetY: babyArrow.offsetY + daY, alpha: 1}, 1, {ease: FlxEase.circOut, startDelay: 0.5 + Conductor.beatLength * data});
 			}
 		}
 	}
@@ -415,6 +398,12 @@ class PlayField extends FlxTypedGroup<FlxBasic>
 	{
 		return FlxSort.byValues(FlxSort.ASCENDING, Obj1.zIndex, Obj2.zIndex);
 	}
+
+	private static function sortNotesAscend(a:Note, b:Note):Int
+		return Std.int(a.strumTime - b.strumTime);
+
+	private static function sortNotesDescend(a:Note, b:Note):Int
+		return Std.int(b.strumTime - a.strumTime);
 
 	// spawns a notesplash w/ specified skin. optional note to derive the skin and colours from.
 
@@ -615,16 +604,16 @@ class PlayField extends FlxTypedGroup<FlxBasic>
 				if (keysPressed[data]){
 					var noteList = getTapNotesWithEnd(data, Conductor.songPosition + ClientPrefs.hitWindow, (note:Note) -> !note.isSustainNote, false);
 					
-					noteList.sort((a, b) -> Std.int(b.strumTime - a.strumTime));
+					noteList.sort(sortNotesDescend);
 					
 					while (noteList.length > 0)
 					{
 						var note:Note = noteList.pop();
-						var judge:Judgment = judgeManager.judgeNote(note);
+						var judge:Judgment = judgeManager.judgeNote(note, Conductor.songPosition);
 						if (judge != UNJUDGED)
 						{
 							note.hitResult.judgment = judge;
-							note.hitResult.hitDiff = note.strumTime - Conductor.songPosition;
+							note.hitResult.hitDiff = Conductor.songPosition - note.strumTime;
 							noteHitCallback(note, this);
 						}
 						

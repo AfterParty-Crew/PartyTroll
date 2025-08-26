@@ -1,5 +1,7 @@
 package funkin.states.editors;
 
+import flixel.addons.transition.FlxTransitionableState;
+
 #if DISCORD_ALLOWED
 import funkin.api.Discord.DiscordClient;
 #end
@@ -15,13 +17,22 @@ using StringTools;
 class MasterEditorMenu extends MusicBeatState
 {
 	var options:Array<String> = [
-		//'Week Editor',
-		//'Menu Character Editor',
+		'Song Select',
 		'Character Editor',
 		'Chart Editor',
+		'Test Stage',
+		'VSlice Converter',
+		/*
 		'Stage Editor',
 		'Stage Builder',
-		'Test Stage'
+		*/
+		/*
+		'Week Editor',
+		'Menu Character Editor',
+		*/
+		#if USING_MOONCHART
+		'Chart Converter',
+		#end
 	];
 	private var menu:AlphabetMenu;
 	private var directories:Array<String> = [null];
@@ -31,6 +42,10 @@ class MasterEditorMenu extends MusicBeatState
 
 	override function create()
 	{
+		this.persistentUpdate = true;
+		super.create();
+		FlxG.mouse.visible = false;
+		FlxTransitionableState.skipNextTransOut = true;
 		FlxG.camera.bgColor = FlxColor.BLACK;
 
 		#if DISCORD_ALLOWED
@@ -47,15 +62,22 @@ class MasterEditorMenu extends MusicBeatState
 		menu.controls = controls;
 		menu.callbacks.onAccept = function(i, _){
 			switch(options[i]) {
+				case 'Song Select': MusicBeatState.switchState(new SongSelectState()); return;
 				case 'Character Editor': MusicBeatState.switchState(new CharacterEditorState(Character.DEFAULT_CHARACTER, false));
-				case 'Stage Editor': MusicBeatState.switchState(new StageEditorState());
 				case 'Chart Editor': LoadingState.loadAndSwitchState(new ChartingState(), false);
+				case 'VSlice Converter': MusicBeatState.switchState(new funkin.states.editors.VSliceConverter());
+				/*
+				case 'Stage Editor': MusicBeatState.switchState(new StageEditorState());
 				case 'Stage Builder': MusicBeatState.switchState(new StageBuilderState());
+				*/
 				case "Test Stage": MusicBeatState.switchState(new TestState());
+				#if USING_MOONCHART
+				case 'Chart Converter': MusicBeatState.switchState(new ChartConverterState());
+				#end
 				default: return;
 			}
 			
-			FlxG.sound.music.volume = 0;
+			MusicBeatState.stopMenuMusic();
 			menu.controls = null;
 		}
 		for (name in options) menu.addTextOption(name);
@@ -82,9 +104,6 @@ class MasterEditorMenu extends MusicBeatState
 		if(found > -1) curDirectory = found;
 		changeDirectory();
 		#end
-
-		FlxG.mouse.visible = false;
-		super.create();
 	}
 
 	override function update(elapsed:Float)

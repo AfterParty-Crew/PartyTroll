@@ -6,6 +6,7 @@ import funkin.scripts.FunkinHScript;
 @:build(funkin.macros.ScriptingMacro.addScriptingCallbacks([
 	"create",
 	"update",
+	"draw",
 	"destroy",
 	"openSubState",
 	"closeSubState",
@@ -33,6 +34,11 @@ class HScriptedState extends MusicBeatState
 
 		_extensionScript = FunkinHScript.fromFile(scriptPath, scriptPath, vars, false);
 		_extensionScript.call("new", []);
+		_extensionScript.set("add", this.add);
+		_extensionScript.set("remove", this.remove);
+		_extensionScript.set("this", this);
+		_extensionScript.set("insert", this.insert);
+		_extensionScript.set("members", this.members);
 	}
 
 	static public function fromFile(name:String, ?scriptVars)

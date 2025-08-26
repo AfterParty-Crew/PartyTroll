@@ -11,23 +11,45 @@ typedef OptionCallbacks = {
 	?onAccept:Function
 }
 
+typedef MenuCallback = (Int, Alphabet) -> Void;
+
 typedef MenuCallbacks = {
-	?onSelect:(Int, Alphabet) -> Void,
-	?unSelect:(Int, Alphabet) -> Void,
-	?onAccept:(Int, Alphabet) -> Void
+	?onSelect:MenuCallback,
+	?unSelect:MenuCallback,
+	?onAccept:MenuCallback
 }
 
 class AlphabetMenu extends FlxTypedGroup<Alphabet>
 {
 	public var curSelected(default, set):Null<Int> = null;
 	public var curItem:Null<Alphabet> = null;
-	public var controls:Null<Controls>;
-	public var inputsActive:Bool = true;
 	
-	private var itemCallbacks:Map<Alphabet, OptionCallbacks> = [];
 	public final callbacks:MenuCallbacks = {}
 
-	function set_curSelected(value:Null<Int>)
+	public var controls:Null<Controls>;
+	public var inputsActive:Bool = true;
+
+	public var textSize:Float = 1.0;
+
+	private final itemCallbacks:Map<Alphabet, OptionCallbacks> = [];
+	
+	private var holdTimer:Float = 0.0;
+
+	public function addTextOption(text:String, ?callbacks:OptionCallbacks):Alphabet
+	{
+		var index = members.length;
+
+		var item = new Alphabet(0, 70 * index + 30, text, true, false, null, textSize);
+		item.ID = index;
+		add(item);
+
+		itemCallbacks.set(item, callbacks);
+
+		onAdded(item);
+		return item;
+	}
+
+	private function set_curSelected(value:Null<Int>)
 	{
 		var range:Int = members.length;
 
@@ -42,26 +64,12 @@ class AlphabetMenu extends FlxTypedGroup<Alphabet>
 
 		var prevItem = curItem;
 		if (prevItem != null){
-			prevItem.alpha = 0.6;
-
-			if (callbacks.unSelect != null)
-				callbacks.unSelect(curSelected, prevItem);
-
-			var callbacks = itemCallbacks.get(prevItem);
-			if (callbacks != null && callbacks.unSelect != null)
-				callbacks.unSelect();
+			unSelect(prevItem);
 		}
 		
 		curItem = members[value];
 		if (curItem != null){
-			curItem.alpha = 1.0;
-
-			if (callbacks.onSelect != null)
-				callbacks.onSelect(value, curItem);
-
-			var callbacks = itemCallbacks.get(curItem);
-			if (callbacks != null && callbacks.onSelect != null)
-				callbacks.onSelect();
+			onSelect(curItem);
 		}
 
 		if (value != null){
@@ -75,31 +83,51 @@ class AlphabetMenu extends FlxTypedGroup<Alphabet>
 		return curSelected = value;
 	}
 
-	public function updateItemPos(item:Alphabet, index:Float) {
+	private function onAdded(item:Alphabet) {
+		updateItemPos(item, item.ID);
+		item.setPosition(item.targetX, item.targetY);
+		item.alpha = 0.6;
+
+		if (curSelected == null)
+			curSelected = item.ID;
+	}
+
+	private function unSelect(item:Alphabet) {
+		item.alpha = 0.6;
+
+		if (callbacks.unSelect != null)
+			callbacks.unSelect(item.ID, item);
+
+		var callbacks = itemCallbacks.get(item);
+		if (callbacks != null && callbacks.unSelect != null)
+			callbacks.unSelect();
+	}
+
+	private function onSelect(item:Alphabet) {
+		item.alpha = 1.0;
+
+		if (callbacks.onSelect != null)
+			callbacks.onSelect(item.ID, item);
+
+		var callbacks = itemCallbacks.get(item);
+		if (callbacks != null && callbacks.onSelect != null)
+			callbacks.onSelect();
+	}
+
+	private function onAccept(item:Alphabet) {
+		if (callbacks.onAccept != null)
+			callbacks.onAccept(item.ID, item);
+
+		var callbacks = itemCallbacks.get(item);
+		if (callbacks != null && callbacks.onAccept != null)
+			callbacks.onAccept();
+	}
+
+	private function updateItemPos(item:Alphabet, index:Float) {
 		item.targetX = (index * 20) + 90;
 		item.targetY = (index * 120 * 1.3) + (FlxG.height * 0.48);
 	}
 
-	public function addTextOption(text:String, ?callbacks:OptionCallbacks, ?textSize:Float)
-	{
-		var index = members.length;
-
-		var item = new Alphabet(0, 70 * index + 30, text, true, false, null, textSize);
-		updateItemPos(item, index);
-		item.ID = index;
-		add(item);
-
-		itemCallbacks.set(item, callbacks);
-
-		if (curSelected == null)
-			curSelected = index;
-		else
-			item.alpha = 0.6;
-
-		return item;
-	}
-
-	private var holdTimer:Float = 0.0;
 	function updateInput(elapsed:Float, controls:Controls)
 	{
 		if (!inputsActive)
@@ -150,12 +178,7 @@ class AlphabetMenu extends FlxTypedGroup<Alphabet>
 		}
 		
 		if (accept && curItem != null){
-			if (callbacks.onAccept != null)
-				callbacks.onAccept(curSelected, curItem);
-
-			var callbacks = itemCallbacks.get(curItem);
-			if (callbacks != null && callbacks.onAccept != null)
-				callbacks.onAccept();
+			onAccept(curItem);
 		}
 	}
 

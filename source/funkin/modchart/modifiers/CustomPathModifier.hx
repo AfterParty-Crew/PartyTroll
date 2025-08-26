@@ -1,10 +1,11 @@
 package funkin.modchart.modifiers;
 
-typedef PathInfo = {
-	var position:Vector3;
-	var dist:Float;
-	var start:Float;
-	var end:Float;
+@:structInit
+class PathInfo {
+	public final position:Vector3;
+	public final start:Float;
+	public var end:Float;
+	public var dist:Float;
 }
 
 class CustomPathModifier extends NoteModifier {
@@ -24,16 +25,6 @@ class CustomPathModifier extends NoteModifier {
 	public function new(modMgr:ModManager, ?parent:Modifier){
 		super(modMgr, parent);
 		moveSpeed = getMoveSpeed();
-
-		// ridiculous that haxe doesnt have a numeric for loop
-
-		// neb from the future here
-		//.. it fucking does
-		// I forgot about (for start...end)
-		// You just can't set the interval.
-		// how did i forget it fucking has a numeric for loop im gonna kms.
-
-		// epic fail
 
 		for (col => points in getPath()) {
 			var dirPath:Array<PathInfo> = [];
@@ -83,11 +74,7 @@ class CustomPathModifier extends NoteModifier {
 		if (progress <= 0) return pos.lerp(daPath[0].position, value, pos);
 		var outPos = pos.clone();
 
-		var idx:Int = 0;
-		// STILL ridiculous
-		// no its not im just dumb
-
-		while(idx<daPath.length){
+		for (idx in 0...daPath.length){
 			var cData = daPath[idx];
 			var nData = daPath[idx+1];
 			if (nData != null && cData != null){
@@ -97,7 +84,6 @@ class CustomPathModifier extends NoteModifier {
 					pos.lerp(interpPos, value, outPos);
 				}
 			}
-			idx++;
 		}
 		return outPos;
 	}

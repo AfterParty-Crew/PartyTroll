@@ -1,7 +1,6 @@
 package funkin.scripts;
 
 import haxe.CallStack;
-import funkin.scripts.Util.ModchartSprite;
 #if USING_FLXANIMATE
 import funkin.objects.FlxAnimateCompat; // vscode stfu
 #end
@@ -14,7 +13,7 @@ import funkin.states.PlayState;
 import funkin.states.MusicBeatState;
 import funkin.states.MusicBeatSubstate;
 
-import funkin.input.PlayerSettings;
+import funkin.input.Controls;
 import funkin.api.Windows;
 
 import flixel.FlxG;
@@ -49,13 +48,13 @@ class FunkinHScript extends FunkinScript
 		
 	}
 
-	inline public static function parseString(script:String, ?name:String = "Script")
+	inline public static function parseString(script:String, ?name:String = "Script"):Null<Expr>
 	{
 		parser.line = 1;
 		return parser.parseString(script, name);
 	}
 
-	inline public static function parseFile(file:String, ?name:String)
+	inline public static function parseFile(file:String, ?name:String):Null<Expr>
 		return parseString(Paths.getContent(file), (name == null ? file : name));
 
 	public static function blankScript(?name, ?additionalVars)
@@ -96,7 +95,7 @@ class FunkinHScript extends FunkinScript
 		}
 		catch(e:haxe.Exception) {
 			var msg = "Error parsing hscript! " + e.message;
-			trace(msg);
+			print(e.message);
 
 			#if desktop
 			var title = "Error on haxe script!";
@@ -148,6 +147,40 @@ class FunkinHScript extends FunkinScript
 		set("getClass", Type.resolveClass);
 		set("getEnum", Type.resolveEnum);
 		
+		#if NMV_MOD_COMPATIBILITY
+		set("addHaxeLibrary", function(c:String, ?p:String){
+			// Dumb hardcoded whatever idc!!!
+
+			if (c == 'KUTValueHandler')
+				return;
+
+			if (c == 'HitSingleMenu'){
+				importClass("funkin.states.FreeplayState");
+				return;
+			}
+
+			if (p == 'meta.states')
+				p = 'funkin.states';
+
+			if (p == 'gameObjects')
+				p = 'funkin.objects';
+
+			if (p == 'gameObjects.shader')
+				p = 'funkin.objects.shaders';
+
+			if (p == 'meta.data')
+				p = 'funkin.data';
+
+			if (p == 'meta.data.scripts')
+				p = 'funkin.scripts';
+
+
+			if(p != null)
+				importClass('$p.$c');
+			else
+				importClass(c);
+		});
+		#end
 		set("importClass", importClass);
 		set("importEnum", importEnum);
 
@@ -187,8 +220,6 @@ class FunkinHScript extends FunkinScript
 		super.setDefaultVars();
 
 		var currentState = flixel.FlxG.state;
-
-		interpreter.scriptObject = currentState;
 		
 		set("state", currentState);
 		set("game", currentState);
@@ -196,7 +227,7 @@ class FunkinHScript extends FunkinScript
 		if (currentState is PlayState){
 			var currentState:PlayState = cast currentState;
 			var debugPrint:Function = Reflect.makeVarArgs(function(toPrint) {
-				currentState.addTextToDebug('$scriptName: ${toPrint.join(', ')}');
+				currentState.addTextToDebug(toPrint.join(', '));
 			});
 
 			set("getInstance", getInstance);
@@ -215,6 +246,7 @@ class FunkinHScript extends FunkinScript
 		set("FlxSprite", FlxSprite);
 		set("FlxCamera", FlxCamera);
 		set("FlxSound", FlxSound);
+		set("FlxTiledSprite", flixel.addons.display.FlxTiledSprite);
 		set("FlxMath", flixel.math.FlxMath);
 		set("FlxTimer", flixel.util.FlxTimer);
 		set("FlxTween", flixel.tweens.FlxTween);
@@ -248,9 +280,6 @@ class FunkinHScript extends FunkinScript
 		#if USING_FLXANIMATE
 		set("FlxAnimate", FlxAnimateCompat);
 		#end
-
-		// i have no idea
-		set("Json", {parse: haxe.Json.parse, stringify: haxe.Json.stringify});
 	}
 
 	private function setVideoVars() {
@@ -295,8 +324,8 @@ class FunkinHScript extends FunkinScript
 
 	private function setFNFVars() {
 		// FNF-specific things
-		set("controls", PlayerSettings.player1.controls);
-		set("get_controls", () -> return PlayerSettings.player1.controls);
+		set("controls", Controls.firstActive);
+		set("get_controls", () -> return Controls.firstActive);
 		
 		set("Paths", funkin.Paths);
 		set("Conductor", funkin.Conductor);
@@ -311,12 +340,12 @@ class FunkinHScript extends FunkinScript
 		set("GameOverSubstate", funkin.states.GameOverSubstate);
 		set("Song", funkin.data.Song);
 		set("BGSprite", funkin.objects.BGSprite);
-		set("RatingSprite", funkin.objects.RatingGroup.RatingSprite);
+		set("RatingSprite", funkin.objects.hud.RatingGroup.RatingSprite);
 
-		set("Note", funkin.objects.Note);
-		set("NoteObject", funkin.objects.NoteObject);
-		set("NoteSplash", funkin.objects.NoteSplash);
-		set("StrumNote", funkin.objects.StrumNote);
+		set("Note", funkin.objects.notes.Note);
+		set("NoteObject", funkin.objects.notes.NoteObject);
+		set("NoteSplash", funkin.objects.notes.NoteSplash);
+		set("StrumNote", funkin.objects.notes.StrumNote);
 		set("PlayField", funkin.objects.playfields.PlayField);
 		set("NoteField", funkin.objects.playfields.NoteField);
 
@@ -348,11 +377,13 @@ class FunkinHScript extends FunkinScript
 		set("EaseEvent", funkin.modchart.events.EaseEvent);
 		set("SetEvent", funkin.modchart.events.SetEvent);
 
-		set("HScriptedHUD", funkin.objects.hud.HScriptedHUD);
+		set("HScriptedHUD", funkin.objects.huds.HScriptedHUD);
 		set("HScriptModifier", funkin.modchart.HScriptModifier);
 
 		set("HScriptedState", funkin.states.scripting.HScriptedState);
 		set("HScriptedSubstate", funkin.states.scripting.HScriptedSubstate);
+
+		set("Highscore", funkin.data.Highscore); // Useful for stuff like levels showing diff songs before and after finishing (i.e Weekend 1)
 	} 
 
 	function importClass(className:String)

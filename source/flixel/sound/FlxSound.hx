@@ -2,18 +2,14 @@ package flixel.sound;
 
 import funkin.ClientPrefs;
 
+#if lime_openal
 import lime.system.CFFIPointer;
 import lime.media.openal.ALEffect;
+import lime.media.openal.ALSource;
 import lime.media.openal.ALAuxiliaryEffectSlot;
 import lime.media.openal.ALFilter;
 import lime.media.openal.AL;
-
-import openfl.events.Event;
-import openfl.events.IEventDispatcher;
-import openfl.media.Sound;
-import openfl.media.SoundChannel;
-import openfl.media.SoundTransform;
-import openfl.net.URLRequest;
+#end
 
 import flixel.FlxBasic;
 import flixel.FlxG;
@@ -24,12 +20,20 @@ import flixel.tweens.FlxTween;
 import flixel.util.FlxStringUtil;
 import flixel.sound.FlxSoundGroup;
 
-import openfl.Assets;
+import openfl.events.Event;
+import openfl.events.IEventDispatcher;
+import openfl.media.Sound;
+import openfl.media.SoundChannel;
+import openfl.media.SoundTransform;
+import openfl.net.URLRequest;
 #if flash11
-import flash.utils.ByteArray;
+import openfl.utils.ByteArray;
 #end
+#if (flixel < "5.9.0")
+import openfl.Assets;
 #if (openfl >= "8.0.0")
 import openfl.utils.AssetType;
+#end
 #end
 
 /**
@@ -114,6 +118,9 @@ class FlxSound extends FlxBasic
 
 	/**
 	 * Pan amount. -1 = full left, 1 = full right. Proximity based panning overrides this.
+	 * 
+	 * Note: On desktop targets this only works with mono sounds, due to limitations of OpenAL.
+	 * More info: [OpenFL Forums - SoundTransform.pan does not work](https://community.openfl.org/t/windows-legacy-soundtransform-pan-does-not-work/6616/2?u=geokureli)
 	 */
 	public var pan(get, set):Float;
 
@@ -127,10 +134,12 @@ class FlxSound extends FlxBasic
 	 */
 	public var volume(get, set):Float;
 
+	#if FLX_PITCH
 	/**
 	 * Set pitch, which also alters the playback speed. Default is 1.
 	 */
 	public var pitch(get, set):Float;
+	#end
 
 	/**
 	 * The position in runtime of the music playback in milliseconds.
@@ -145,7 +154,8 @@ class FlxSound extends FlxBasic
 	public var length(get, never):Float;
 
 	/**
-	 * The sound group this sound belongs to
+	 * The sound group this sound belongs to, can only be in one group.
+	 * NOTE: This setter is deprecated, use `group.add(sound)` or `group.remove(sound)`.
 	 */
 	public var group(default, set):FlxSoundGroup;
 
@@ -209,10 +219,12 @@ class FlxSound extends FlxBasic
 	 */
 	var _length:Float = 0;
 
+	#if FLX_PITCH
 	/**
 	 * Internal tracker for pitch.
 	 */
 	var _pitch:Float = defaultPitch;
+	#end
 
 	/**
 	 * Internal tracker for total volume adjustment.
@@ -283,6 +295,10 @@ class FlxSound extends FlxBasic
 
 	override public function destroy():Void
 	{
+		// Prevents double destroy
+		if (group != null)
+			group.remove(this);
+	
 		_transform = null;
 		exists = false;
 		active = false;
@@ -365,6 +381,8 @@ class FlxSound extends FlxBasic
 	/**
 	 * One of the main setup functions for sounds, this function loads a sound from an embedded MP3.
 	 *
+	 * **Note:** If the `FLX_SOUND_ADD_EXT` flag is enabled, you may omit the file extension
+	 *
 	 * @param	EmbeddedSound	An embedded Class object representing an MP3 file.
 	 * @param	Looped			Whether or not this sound should loop endlessly.
 	 * @param	AutoDestroy		Whether or not this FlxSound instance should be destroyed when the sound finishes playing.
@@ -389,8 +407,13 @@ class FlxSound extends FlxBasic
 		}
 		else if ((EmbeddedSound is String))
 		{
+			#if (flixel >= "5.9.0")
+			if (FlxG.assets.exists(EmbeddedSound, SOUND))
+				_sound = FlxG.assets.getSoundUnsafe(EmbeddedSound);
+			#else
 			if (Assets.exists(EmbeddedSound, AssetType.SOUND) || Assets.exists(EmbeddedSound, AssetType.MUSIC))
 				_sound = Assets.getSound(EmbeddedSound);
+			#end
 			else
 				FlxG.log.error('Could not find a Sound asset with an ID of \'$EmbeddedSound\'.');
 		}
@@ -464,6 +487,9 @@ class FlxSound extends FlxBasic
 		updateTransform();
 		exists = true;
 		onComplete = OnComplete;
+		#if FLX_PITCH
+		pitch = defaultPitch;
+		#end
 		_length = (_sound == null) ? 0 : _sound.length;
 		endTime = _length;
 		return this;
@@ -643,50 +669,46 @@ class FlxSound extends FlxBasic
 	{
 		@:privateAccess
 		#if (openfl < "9.3.2")
-		return _channel.__source;
+		return _channel?.__source;
 		#else
-		return _channel.__audioSource;
+		return _channel?.__audioSource;
 		#end
+	}
+
+	inline function get_handle():ALSource
+	{
+		@:privateAccess
+		return get_audioSource()?.__backend.handle;
 	}
 
 	function updateFilter()
 	{
-		#if !(flash || js || html5)
-		@:privateAccess
-		if (_channel != null)
-		{
-			var source = get_audioSource();
-			if (source == null)
-				return;
+		#if lime_openal
+		var handle = get_handle();
+		if (handle == null)
+			return;
 
-			var handle = source.__backend.handle;
-			if (filter != null)
-				AL.sourcei(handle, AL.DIRECT_FILTER, filter);
-			else
-				AL.removeDirectFilter(handle);
-		}
+		if (filter != null)
+			AL.sourcei(handle, AL.DIRECT_FILTER, filter);
+		else
+			AL.removeDirectFilter(handle);
 		#end
 	}
 
 	function updateEffect()
 	{
-		#if !(flash || js || html5)
-		@:privateAccess
-		if (_channel != null)
-		{
-			var source = get_audioSource();
-			if (source == null)
-				return;
+		#if lime_openal
+		var handle = get_handle();
+		if (handle == null)
+			return;
 
-			var handle = source.__backend.handle;
-
-			if (effect != null)
-			{
-				var cffi:CFFIPointer = cast filter;
-				AL.auxi(effectAux, AL.EFFECTSLOT_EFFECT, effect);
-				AL.source3i(handle, AL.AUXILIARY_SEND_FILTER, effectAux, 0, filter == null ? AL.FILTER_NULL : Std.int(cffi.get()));
-			}else
-				AL.source3i(handle, AL.AUXILIARY_SEND_FILTER, AL.FILTER_NULL, 0, AL.FILTER_NULL);
+		if (effect != null) {
+			var filter:Int = (filter == null) ? AL.FILTER_NULL : Std.int((filter:CFFIPointer).get());
+			AL.auxi(effectAux, AL.EFFECTSLOT_EFFECT, effect);
+			AL.source3i(handle, AL.AUXILIARY_SEND_FILTER, effectAux, 0, filter);
+		}
+		else {
+			AL.source3i(handle, AL.AUXILIARY_SEND_FILTER, AL.FILTER_NULL, 0, AL.FILTER_NULL);
 		}
 		#end
 	}
@@ -705,7 +727,9 @@ class FlxSound extends FlxBasic
 		_channel = _sound.play(_time, 0, _transform);
 		if (_channel != null)
 		{
+			#if FLX_PITCH
 			pitch = _pitch;
+			#end
 			updateFilter();
 			updateEffect();
 
@@ -796,24 +820,21 @@ class FlxSound extends FlxBasic
 	}
 	#end
 
-	function set_group(group:FlxSoundGroup):FlxSoundGroup
+	@:deprecated("sound.group = myGroup is deprecated, use myGroup.add(sound)") // 5.7.0
+	function set_group(value:FlxSoundGroup):FlxSoundGroup
 	{
-		if (this.group != group)
+		if (value != null)
 		{
-			var oldGroup:FlxSoundGroup = this.group;
-
-			// New group must be set before removing sound to prevent infinite recursion
-			this.group = group;
-
-			if (oldGroup != null)
-				oldGroup.remove(this);
-
-			if (group != null)
-				group.add(this);
-
-			updateTransform();
+			// add to new group, also removes from prev and calls updateTransform
+			value.add(this);
 		}
-		return group;
+		else
+		{
+			// remove from prev group, also calls updateTransform
+			group.remove(this);
+		}
+		updateTransform();
+		return value;
 	}
 
 	inline function get_playing():Bool
@@ -833,6 +854,7 @@ class FlxSound extends FlxBasic
 		return Volume;
 	}
 
+	#if FLX_PITCH
 	inline function get_pitch():Float
 	{
 		return _pitch;
@@ -840,16 +862,13 @@ class FlxSound extends FlxBasic
 
 	function set_pitch(v:Float):Float
 	{
-		@:privateAccess
-		if (_channel != null)
-		{
-			var source = get_audioSource();
-			if (source != null)
-				source.pitch = v;
-		}
+		var source = get_audioSource();
+		if (source != null)
+			source.pitch = v;
 
 		return _pitch = v;
 	}
+	#end
 
 	inline function set_filter(v:ALFilter)
 	{
@@ -903,8 +922,7 @@ class FlxSound extends FlxBasic
 			LabelValuePair.weak("playing", playing),
 			LabelValuePair.weak("time", time),
 			LabelValuePair.weak("length", length),
-			LabelValuePair.weak("volume", volume),
-			LabelValuePair.weak("pitch", pitch)
+			LabelValuePair.weak("volume", volume)
 		]);
 	}
 }

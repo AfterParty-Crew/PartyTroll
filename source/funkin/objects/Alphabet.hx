@@ -40,7 +40,7 @@ class Alphabet extends FlxTypedSpriteGroup<AlphaCharacter>
 	#end
 
 	// public function new(x:Float, y:Float, fieldWidth = 0.0, text = "", textScale = 1.0)
-	public function new(x:Float = 0, y:Float = 0, text:String = "", bold:Bool = false, ?fuck:Dynamic, ?lol:Dynamic, textScale = 1.0)
+	public function new(x:Float = 0, y:Float = 0, text:String = "", bold:Bool = false, ?_:Dynamic, ?_:Dynamic, textScale:Float = 1.0)
 	{
 		super(x, y);
 
@@ -275,19 +275,6 @@ class AlphaCharacter extends FlxSprite
 		updateHitbox();
 		y = 60 - height;
 
-		#if tgt
-		switch (character)
-		{
-			case "g" | "j" | "p" | "q" | "y":
-				y += 13;
-			case "z" | "Z":
-				y--;
-			case "Q":
-				y += 8;
-			case "B" | "D" | "E" | "L":
-				y--;
-		}
-		#else
 		switch (character)
 		{
 			case "p" | "q" | "y":
@@ -298,7 +285,6 @@ class AlphaCharacter extends FlxSprite
 				//x -= 35 - (90 * (1.0 - scale.x));
 				y -= 16;
 		}
-		#end
 
 		return true;
 	}

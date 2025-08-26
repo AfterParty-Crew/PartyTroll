@@ -20,8 +20,7 @@ class Hitmark extends FlxSprite
 	{
 		decayTime += FlxG.elapsed;
 
-		var s = Conductor.crochet * 0.001;
-		var decayScale = 1 - (decayTime / (s * 8)); // 8 beats to decay
+		var decayScale = 1 - (decayTime / (Conductor.beatLength * 8)); // 8 beats to decay
 		
 		scale.y = decayScale;
 		alpha = baseAlpha * decayScale;
@@ -203,7 +202,7 @@ class Hitbar extends FlxSpriteGroup
 		hitMark.color = FlxColor.RED;
 		hitMark.visible = visible;
 		hitMark.x = mainBar.x + ((mainBar.width - hitMark.width) / 2);
-		hitMark.x += ((hitbarPxPerMs / 2) * -time);
+		hitMark.x += ((hitbarPxPerMs / 2) * time);
 		hitMark.y = mainBar.y + ((mainBar.height - hitMark.height) / 2);
 	}
 }

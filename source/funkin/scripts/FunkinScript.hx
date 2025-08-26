@@ -7,7 +7,6 @@ import funkin.ClientPrefs;
 
 enum abstract ScriptType(String) from String to String {
 	var HSCRIPT = "hscript";
-	var PSYCH_LUA = "lua";
 }
 
 /** 
@@ -74,7 +73,7 @@ abstract class FunkinScript
 		#end
 		
 		set('downscroll', ClientPrefs.downScroll);
-		set('middlescroll', ClientPrefs.midScroll);
+		set('middlescroll', ClientPrefs.centerNotefield);
 		set('framerate', ClientPrefs.framerate);
 		set('ghostTapping', ClientPrefs.ghostTapping);
 		set('hideHud', ClientPrefs.hudOpacity > 0.0);
@@ -112,7 +111,6 @@ abstract class FunkinScript
 			// set('week', WeekData.weeksList[PlayState.storyWeek]);
 			// set('weekRaw', PlayState.storyWeek);
 
-			set("difficulty", PlayState.difficulty);
 			set("difficultyName", PlayState.difficultyName);
 			
 			set('healthGainMult', PlayState.instance.healthGain);

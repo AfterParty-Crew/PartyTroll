@@ -1,5 +1,7 @@
 package funkin.states;
 
+import funkin.data.MusicData;
+import flixel.math.FlxMath;
 import funkin.input.Controls;
 import flixel.addons.transition.FlxTransitionableState;
 import flixel.addons.ui.FlxUIState;
@@ -15,10 +17,31 @@ import funkin.states.scripting.*;
 
 #if SCRIPTABLE_STATES
 import funkin.states.scripting.HScriptOverridenState;
+#end
 
+enum abstract SongSyncMode(String) to String {
+	var DIRECT = "Direct";
+	var LEGACY = "Legacy";
+	var PSYCH_1_0 = "Psych 1.0";
+	var LAST_MIX = "Last Mix";
+	var SYSTEM_TIME = "System Time";
+	
+	public static function fromString(str:String):SongSyncMode {
+		return switch (str) {
+			case "Direct": DIRECT;
+			case "Legacy": LEGACY;
+			case "Psych 1.0": PSYCH_1_0;
+			case "System Time": SYSTEM_TIME;
+			//case "Last Mix": LAST_MIX;
+			default: LAST_MIX;
+		}
+	} 
+}
+#if SCRIPTABLE_STATES
 @:autoBuild(funkin.macros.ScriptingMacro.addScriptingCallbacks([
 	"create",
 	"update",
+	"draw",
 	"destroy",
 	"openSubState",
 	"closeSubState",
@@ -29,6 +52,8 @@ import funkin.states.scripting.HScriptOverridenState;
 #end
 class MusicBeatState extends FlxUIState
 {
+	public var updateSongPos:Bool = true;
+	
 	private var curSection:Int = 0;
 	private var stepsToDo:Int = 0;
 
@@ -46,6 +71,13 @@ class MusicBeatState extends FlxUIState
 	@:noCompletion inline function set_curDecStep(v) return Conductor.curDecStep=v;
 	@:noCompletion inline function set_curDecBeat(v) return Conductor.curDecBeat=v;
 	#end
+
+	private var songSyncMode(default, set):SongSyncMode;
+	private function set_songSyncMode(v:SongSyncMode):SongSyncMode {
+		songSyncMode = v;
+		Conductor.useAccPosition = songSyncMode == SYSTEM_TIME;
+		return songSyncMode;
+	}
 
 	private var controls(get, never):Controls;
 
@@ -65,6 +97,7 @@ class MusicBeatState extends FlxUIState
 	public function new(canBeScripted:Bool = true) {
 		super();
 		this.canBeScripted = canBeScripted;
+		this.songSyncMode = LAST_MIX;
 	}
 
 	override public function destroy() 
@@ -78,7 +111,7 @@ class MusicBeatState extends FlxUIState
 	}
 
 	inline function get_controls():Controls
-		return funkin.input.PlayerSettings.player1.controls;
+		return funkin.input.Controls.firstActive;
 
 	override function create() 
 	{
@@ -96,8 +129,57 @@ class MusicBeatState extends FlxUIState
 	{
 		super.onFocusLost();
 	}
+	
+	private var lastMixTimer:Float = 0;
+	private var lastMixPos:Float = 0;
 
-	private function updateSteps() {
+	private function updateSongPosition(?inst:FlxSound):Void {
+		inst ??= Conductor.tracks[0];
+		if (inst == null) return;
+
+		@:privateAccess
+		var elapsedMS:Float = FlxG.game._elapsedMS * inst.pitch;
+
+		switch (songSyncMode)
+		{
+			case DIRECT:
+				// Ludem Dare sync
+				// Jittery and retarded, but works maybe
+				Conductor.songPosition = inst.time;
+
+			case LEGACY:
+				// Resync Vocals
+				// FUCKING SUCKS DONT USE LMFAO! It's here just incase though
+				Conductor.songPosition += elapsedMS;
+				
+			case PSYCH_1_0:
+				// Psych 1.0 method
+				// Since this works better for Rico so might work better for some other machines too
+				Conductor.songPosition += elapsedMS;
+				Conductor.songPosition = FlxMath.lerp(inst.time, Conductor.songPosition, Math.exp(-elapsedMS * 0.005));
+				var timeDiff:Float = Math.abs(inst.time - Conductor.songPosition);
+				if (timeDiff > 1000)
+					Conductor.songPosition = Conductor.songPosition + 1000 * FlxMath.signOf(timeDiff);
+
+			case SYSTEM_TIME:
+				Conductor.songPosition = Conductor.getAccPosition();
+			
+			case LAST_MIX:
+				// Stepmania method
+				// Works for most people it seems??
+				if (lastMixPos != inst.time) {
+					lastMixPos = inst.time;
+					lastMixTimer = 0;
+				}else {
+					lastMixTimer += elapsedMS;
+				}
+				
+				Conductor.songPosition = lastMixPos + lastMixTimer;
+
+		}
+	}
+
+	private function updateSteps() {	
 		var oldStep:Int = Conductor.curStep;
 		Conductor.updateSteps();
 		var curStep:Int = Conductor.curStep;
@@ -119,7 +201,13 @@ class MusicBeatState extends FlxUIState
 	override function update(elapsed:Float)
 	{
 		updateSteps();
+		if(updateSongPos){
+			if (FlxG.sound.music != null)
+				Conductor.songPosition = FlxG.sound.music.time;
+			else
+				Conductor.songPosition += elapsed * 1000;
 
+		}
 		super.update(elapsed);
 	}
 
@@ -210,10 +298,25 @@ class MusicBeatState extends FlxUIState
 		return cast FlxG.state;
 	}
 
+	function resyncTracks() {
+		Conductor.resyncTracks();
+		lastMixPos = Conductor.songPosition;
+	}
+
 	public function stepHit():Void
 	{
 		if (curStep % 4 == 0)
 			beatHit();
+
+		if (Conductor.playing) {
+			for (track in Conductor.tracks) {
+				if (Math.abs(track.time - Conductor.getAccPosition()) > 30) {
+					trace('sus track resync');
+					resyncTracks();
+					break;
+				}
+			}	
+		}		
 	}
 
 	public function beatHit():Void
@@ -232,16 +335,7 @@ class MusicBeatState extends FlxUIState
 		return section==null ? 4 : Conductor.sectionBeats(section);
 	}
 
-	public static var menuMusic:Sound; // main menu loop
 	public static var menuVox:FlxSound; // jukebox
-
-	public static var menuLoopFunc = function(){
-		trace("menu song ended, looping");
-
-		FlxG.sound.playMusic(menuMusic != null ? menuMusic : Paths.music('freakyMenu'), FlxG.sound.music.volume, true);
-
-		Conductor.changeBPM(180);
-	}; 
 
 	public static function stopMenuMusic(){
 		if (FlxG.sound.music != null){
@@ -258,69 +352,29 @@ class MusicBeatState extends FlxUIState
 		}
 	}
 
+	public static function playMusic(key:String, volume:Float = 1, looped:Bool = true) {
+		MusicBeatState.stopMenuMusic();
+		
+		var md = MusicData.fromName(key);
+		if (md != null) {
+			FlxG.sound.music = md.loadFlxSound(FlxG.sound.music);
+			FlxG.sound.music.volume = volume;
+			FlxG.sound.music.looped = looped;
+			FlxG.sound.music.persist = true;
+			FlxG.sound.music.play();
+			Conductor.changeBPM(md.bpm);
+			Conductor.songPosition = FlxG.sound.music.time;
+		}else {
+			FlxG.sound.playMusic(Paths.music(key), volume, looped);
+		}
+	}
+
 	// TODO: check the jukebox selection n shit and play THAT instead? idk lol
-	public static function playMenuMusic(?volume:Float=1, ?force:Bool = false){				
-		if (FlxG.sound.music != null && FlxG.sound.music.playing && force != true)
+	public static function playMenuMusic(volume:Float=1, force:Bool = false){				
+		if (force != true && FlxG.sound.music != null && FlxG.sound.music.playing)
 			return;
 
 		MusicBeatState.stopMenuMusic();
-		#if tgt
-		funkin.tgt.gallery.JukeboxState.playIdx = 0;
-		#end
-
-		#if MODS_ALLOWED
-		// i NEED to rewrite the paths shit for real 
-		function returnSound(path:String, key:String, ?library:String){
-			var filePath = Path.join([path, key]);
-
-			if (!Paths.currentTrackedSounds.exists(filePath))
-				Paths.currentTrackedSounds.set(filePath, openfl.media.Sound.fromFile(filePath));
-			
-			Paths.localTrackedAssets.push(key);
-
-			return Paths.currentTrackedSounds.get(filePath);
-		}
-
-		var fuck = [Paths.mods(Paths.currentModDirectory), Paths.mods("global"), "assets"];
-		#if MODS_ALLOWED
-		for (mod in Paths.getGlobalContent())
-			fuck.insert(0, Paths.mods(mod));
-		for (mod in Paths.preLoadContent)
-			fuck.push(Paths.mods(mod));
-		for (mod in Paths.postLoadContent)
-			fuck.insert(0, Paths.mods(mod));
-		#end
-		for (folder in fuck){
-			var daPath = Path.join([folder, "music"]);
-			
-			var menuFilePath = daPath+"/freakyMenu.ogg";
-			if (Paths.exists(menuFilePath)){
-				if (Paths.exists(daPath+"/freakyIntro.ogg")){
-					menuMusic = returnSound(daPath, "freakyMenu.ogg");
-
-					FlxG.sound.playMusic(returnSound(daPath, "freakyIntro.ogg"), volume, false);
-					FlxG.sound.music.onComplete = menuLoopFunc;
-				}else{
-					FlxG.sound.playMusic(returnSound(daPath, "freakyMenu.ogg"), volume, true);
-				}	
-
-				break;
-			}
-		}
-		#else
-		menuMusic = Paths.music('freakyMenu');
-		FlxG.sound.playMusic(Paths.music('freakyIntro'), volume, false);
-		FlxG.sound.music.onComplete = menuLoopFunc;
-		#end
-		
-		//// TODO: find a way to soft code this!!! (psych engine already has one so maybe we could just use that and add custom intro text to it :-)
-		#if tgt
-		Conductor.changeBPM(180);
-		#else
-		Conductor.changeBPM(102);
-		#end
-		Conductor.songPosition = 0;
-	}
-	
-	//
+		MusicBeatState.playMusic('freakyMenu', volume, force);
+	}	
 }

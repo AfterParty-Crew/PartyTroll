@@ -1,6 +1,6 @@
 package funkin.data;
 
-import funkin.objects.Note;
+import funkin.objects.notes.Note;
 
 /**
  * Defines how a judgment interacts w/ the combo count
@@ -216,7 +216,7 @@ class JudgmentManager {
 	 * Returns the hit window for a judgment, with the judgeTimescale taken into account
 	 * @param judgment The judgment to get the hit window for
 	 */
-	inline public function getWindow(judgment:Judgment){
+	inline public function getWindow(judgment:Judgment):Float {
 		var d:JudgmentData = judgmentData.get(judgment);
 		return d.window * ((d.badJudgment && judgeTimescale<1)?1:judgeTimescale);
 	}
@@ -224,7 +224,7 @@ class JudgmentManager {
 	/**
 	 * Returns a judgment for a time difference.
 	 */
-	public function judgeTimeDiff(diff:Float) {
+	public function judgeTimeDiff(diff:Float):Judgment {
 		for (judge in hittableJudgments) {
 			if (diff <= getWindow(judge))
 				return judge;
@@ -237,11 +237,10 @@ class JudgmentManager {
 	 * @param note Note to return a judgment for
 	 * @param time The position the note time is compared to for judgment
 	 */
-	public function judgeNote(note:Note, ?hitTime:Float)
+	public function judgeNote(note:Note, hitTime:Float):Judgment
 	{
 		// might be inefficient? idk might wanna optimize this at some point if so
 
-		if (hitTime==null) hitTime = Conductor.getAccPosition();
 		var diff:Float = Math.abs(note.strumTime - hitTime);
 
 		switch(note.noteType){
@@ -255,9 +254,19 @@ class JudgmentManager {
 					if (judge != null) return judge;
 				}
 
+				if (note.defaultJudgement != null) {
+					if (diff <= getWindow(note.defaultJudgement))
+						return note.defaultJudgement;
+
+					return UNJUDGED;
+				}
+
+
 				if (note.hitCausesMiss) {
 					if (diff <= getWindow(MISS_MINE))
 						return MISS_MINE;
+
+					return UNJUDGED;
 				}
 				
 				return judgeTimeDiff(diff);

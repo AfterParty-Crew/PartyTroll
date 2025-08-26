@@ -1,8 +1,7 @@
 // conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem conductor we have a problem
 package funkin;
 
-import funkin.data.Song.SwagSong;
-import funkin.data.Section.SwagSection;
+import funkin.data.ChartData;
 
 typedef BPMChangeEvent =
 {
@@ -28,7 +27,6 @@ class Conductor
 
 	public static var safeZoneOffset:Float = ClientPrefs.hitWindow;
 	public static var visualPosition:Float = 0;
-	public static var lastSongPos:Float;
 
 	/** Whether the song is currently playing. Use startSong and pauseSong to change this **/
 	public static var playing(default, null):Bool = false;
@@ -58,6 +56,9 @@ class Conductor
 
 	public static function pauseSong() 
 	{
+		if (!Conductor.playing)
+			return;
+
 		Conductor.songPosition = getAccPosition();
 		Conductor.playing = false;
 
@@ -68,7 +69,23 @@ class Conductor
 
 	public static function resumeSong()
 	{
+		if (Conductor.playing)
+			return;
+
 		startSong(Conductor.songPosition);
+	}
+
+	public static function changePitch(pitch:Float)
+	{
+		var wasPlaying:Bool = Conductor.playing;
+		Conductor.pauseSong();
+
+		Conductor.pitch = pitch;
+		for (track in tracks)
+			track.pitch = pitch;
+
+		if (wasPlaying)
+			Conductor.resumeSong();
 	}
 	
 	public static var useAccPosition:Bool = false;
@@ -80,14 +97,29 @@ class Conductor
 	}
 
 	public static function cleanup() {
-		if (Conductor.playing) Conductor.pauseSong();
+		for (snd in tracks)
+			snd.stop();
+
+		Conductor.songStartTimestamp = 0;
+		Conductor.songStartOffset = 0;
+
+		Conductor.songPosition = 0;
+		Conductor.playing = false;
+		Conductor.pitch = 1.0;
 		Conductor.bpmChangeMap = [];
 		Conductor.tracks = [];
 	}
 
 	////
-	public static var crochet:Float = (60 / bpm) * 1000; // beat length in milliseconds
-	public static var stepCrochet:Float = crochet / 4; // step length in milliseconds
+	/** beat length in seconds **/
+	public static var beatLength:Float = (60 / bpm);
+	/** step length in seconds **/
+	public static var stepLength:Float = crochet / 4;
+
+	/** beat length in milliseconds **/
+	public static var crochet:Float = beatLength * 1000;
+	/** step length in milliseconds **/
+	public static var stepCrochet:Float = stepLength * 1000;
 
 	public static var curDecStep:Float = 0;
 	public static var curDecBeat:Float = 0;
@@ -139,7 +171,7 @@ class Conductor
 
 			var deltaSteps:Int = Math.round(sectionSteps(section));
 			totalSteps += deltaSteps;
-			totalPos += (15000 * deltaSteps) / curBPM; // calculateStepCrochet(curBPM) * deltaSteps;
+			totalPos += calculateStepCrochet(curBPM) * deltaSteps;
 		}
 		
 		print('new BPM map BUDDY [');
@@ -152,8 +184,10 @@ class Conductor
 	{
 		Conductor.jackLimit = -1;
 		Conductor.bpm = newBpm;
-		Conductor.crochet = Conductor.calculateCrochet(newBpm);
-		Conductor.stepCrochet = Conductor.calculateStepCrochet(newBpm);
+		Conductor.beatLength = Conductor.calculateBeatLength(newBpm);
+		Conductor.stepLength = Conductor.beatLength / 4;
+		Conductor.crochet = Conductor.beatLength * 1000;
+		Conductor.stepCrochet = Conductor.stepLength * 1000;
 	}
 
 	/** From MILLISECONDS actually **/ 
@@ -218,13 +252,13 @@ class Conductor
 	public inline static function getBeatRounded(time:Float):Int
 		return Math.floor(getBeat(time));
 
-	public static function stepToSeconds(step:Float):Float {
+	public static function stepToMs(step:Float):Float {
 		var lastChange = getBPMFromStep(step);
-		return lastChange.songTime + ((step - lastChange.stepTime) / (lastChange.bpm / 60) / 4);
+		return lastChange.songTime + ((step - lastChange.stepTime) * lastChange.stepCrochet);
 	}
 
-	public inline static function stepToMs(step:Float):Float {
-		return stepToSeconds(step) * 1000;
+	public inline static function stepToSeconds(step:Float):Float {
+		return stepToMs(step) / 1000;
 	}
 
 	public static function getBeatSinceChange(time:Float):Float {
@@ -238,14 +272,24 @@ class Conductor
 	}
 
 	////
+	/** Beat duration in seconds */
+	public inline static function calculateBeatLength(bpm:Float):Float {
+		return 60 / bpm;
+	}
+
+	/** Step duration in seconds */
+	public inline static function calculateStepLength(bpm:Float):Float {
+		return calculateBeatLength(bpm) / 4;
+	}
+
 	/** Beat duration in milliseconds */
 	public inline static function calculateCrochet(bpm:Float):Float {
-		return 60000 / bpm; // (60/bpm) * 1000;
+		return calculateBeatLength(bpm) * 1000;
 	}
 
 	/** Step duration in milliseconds */
 	public inline static function calculateStepCrochet(bpm:Float):Float {
-		return 15000 / bpm; // calculateCrochet(bpm) / 4;
+		return calculateStepLength(bpm) * 1000;
 	}
 
 	public inline static function sectionBeats(section:SwagSection):Float {

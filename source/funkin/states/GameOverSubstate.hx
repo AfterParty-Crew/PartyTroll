@@ -22,7 +22,6 @@ class GameOverSubstate extends MusicBeatSubstate
 	public static var deathSoundName:String = 'fnf_loss_sfx';
 	public static var loopSoundName:String = 'gameOver';
 	public static var endSoundName:String = 'gameOverEnd';
-	public static var loopBpm:Float = 100;
 	
 	public static var genericName:String;
 	public static var genericSound:String;
@@ -65,8 +64,6 @@ class GameOverSubstate extends MusicBeatSubstate
 		genericSound = "gameoverGeneric";
 		genericMusic = "";
 
-		loopBpm = 100;
-
 		voicelineNumber = null;
 		voicelineAmount = 0;
 		voicelineName = null;
@@ -80,11 +77,11 @@ class GameOverSubstate extends MusicBeatSubstate
 
 		FlxG.timeScale = 1.0;
 		
-		FlxG.camera.flash(FlxColor.RED, 1);
+		FlxG.camera.bgColor = FlxColor.BLACK;
 		FlxG.camera.follow(camFollowPos, LOCKON, 1);
 
 		Conductor.songPosition = 0;
-		Conductor.changeBPM(loopBpm);
+		Conductor.changeBPM(100);
 
 		if (genericBitch != null){
 			startGeneric();
@@ -172,12 +169,12 @@ class GameOverSubstate extends MusicBeatSubstate
 			return doGenericGameOver();
 		}
 
-		var deathName:String = (characterName != null) ? characterName : (char.deathName + "-dead");
+		var deathName:String = characterName ?? (char.deathId + "-dead");
 		var charInfo = CharacterData.getCharacterFile(deathName);
 
 		if (charInfo == null){
 			warn('Could not get Character data for "$deathName".');
-			deathName = char.curCharacter;
+			deathName = char.characterId;
 			charInfo = CharacterData.getCharacterFile(deathName);
 		}
 
@@ -187,22 +184,8 @@ class GameOverSubstate extends MusicBeatSubstate
 		}
 
 		////		
-		Cache.loadWithList([
-			{path: charInfo.image, type: 'IMAGE'},
-			{path: deathSoundName, type: 'SOUND'},
-			{path: loopSoundName, type: 'MUSIC'},
-			{path: endSoundName, type: 'MUSIC'}
-		]);
-
-		_musicAsset = Paths.music(loopSoundName);
-
-		var bg:FlxSprite = new FlxSprite().makeGraphic(1280*2, 720*2, FlxColor.BLACK);
-		bg.screenCenter();
-		bg.scrollFactor.set();
-		add(bg);
-		bg.alpha = 0;
-		FlxTween.tween(bg, {alpha: 1}, 4, {ease: FlxEase.circOut});
-
+		Cache.loadWithList([{path: charInfo.image, type: 'IMAGE'}]);
+		
 		boyfriend = new Character(
 			char.x - char.positionArray[0], 
 			char.y - char.positionArray[1], 
@@ -214,6 +197,14 @@ class GameOverSubstate extends MusicBeatSubstate
 		boyfriend.x += boyfriend.positionArray[0];
 		boyfriend.y += boyfriend.positionArray[1];
 		add(boyfriend);
+
+		Cache.loadWithList([
+			{path: deathSoundName, type: 'SOUND'},
+			{path: loopSoundName, type: 'MUSIC'},
+			{path: endSoundName, type: 'MUSIC'}
+		]);
+		
+		_musicAsset = Paths.music(loopSoundName);
 
 		camFollow = boyfriend.getGraphicMidpoint();
 		camFollowPos = new FlxObject(game.camFollowPos.x, game.camFollowPos.y);
