@@ -302,8 +302,8 @@ class FreeplayState extends MusicBeatState
 	}
 
 	function openGameplayChangersMenu() {
-		openSubState(new GameplayChangersSubstate());
 		menu.controls = null;
+		openSubState(new GameplayChangersSubstate());
 		this.subStateClosed.addOnce(function(_) {
 			refreshScore();
 			shouldRestoreControl = true;

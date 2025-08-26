@@ -1871,7 +1871,7 @@ class Checkbox extends WidgetSprite
 
 class TextFormats {
 	public static final TAB_NAME:FlxTextFormatData = {
-		font: "vcr.ttf",
+		font: "calibri.ttf",
 		pixelPerfectRender: true,
 
 		size: 32,
@@ -1880,7 +1880,7 @@ class TextFormats {
 	};
 	
 	public static final OPT_LABEL:FlxTextFormatData = {
-		font: "vcr.ttf",
+		font: "calibri.ttf",
 		pixelPerfectRender: true,	
 		
 		size: 32,
@@ -1889,27 +1889,27 @@ class TextFormats {
 	};
 	
 	public static final OPT_NAME:FlxTextFormatData = {
-		font: "quantico.ttf",	
+		font: "calibri.ttf",	
 		size: 25,
 		color: 0xFFFFFFFF,
 		alignment: LEFT
 	};
 
 	public static final OPT_VALUE_TEXT:FlxTextFormatData = {
-		font: "quantico.ttf",
+		font: "calibri.ttf",
 		size: 22,
 		color: 0xFFFFFFFF,
 		alignment: LEFT
 	};
 	
 	public static final OPT_DROPDOWN_OPTION_TEXT:FlxTextFormatData = {
-		font: "quantico.ttf",
+		font: "calibri.ttf",
 		size: 22,
 		color: 0xFFFFFFFF,
 	};
 
 	public static final OPT_DESC:FlxTextFormatData = {
-		font: "vcr.ttf",
+		font: "calibri.ttf",
 		pixelPerfectRender: true,	
 		size: 16,
 		color: 0xFFFFFFFF,

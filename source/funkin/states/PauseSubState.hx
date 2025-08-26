@@ -112,9 +112,7 @@ class PauseSubState extends MusicBeatSubstate
 		songInfo.push(game.displayedSong);
 
 		for (info in Song.getMetadataInfo(game.metadata))
-			songInfo.push(info);
-
-		songInfo.push("Difficulty: " + game.displayedDifficulty.toUpperCase());		
+			songInfo.push(info);	
 		
 		if (game.practiceMode)
 			songInfo.push("PRACTICE MODE");
