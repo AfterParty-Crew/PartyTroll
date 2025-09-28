@@ -394,7 +394,7 @@ class ChartingState extends MusicBeatState
 			ui_start += ui_space_leftover - GRID_SIZE;
 		}
 
-		UI_box.setPosition(ui_start, 25);
+		UI_box.setPosition(ui_start, 95);
 	}
 
 	private function onLoadMetadata() {
@@ -549,10 +549,11 @@ class ChartingState extends MusicBeatState
 		add(dummyArrow);
 
 		////
-		iconBG = FlxGradient.createGradientFlxSprite(1, 45 + 5 * 2, [0xFF535353, 0x00535353]);
+		iconBG = new FlxSprite().makeGraphic(1, 45 + 5 * 2 + 15, FlxColor.BLACK);
 		iconBG.scale.x = FlxG.width;
 		iconBG.updateHitbox();
 		iconBG.scrollFactor.set(0, 0);
+		iconBG.alpha = 0.5;
 		add(iconBG);
 
 		var eventIcon:FlxSprite = new FlxSprite(GRID_SIZE * 0.5 - 30 * 0.5, (55 - 30) * 0.5, Paths.image('eventArrow'));
@@ -698,6 +699,7 @@ class ChartingState extends MusicBeatState
 		progressBar.y += (progressBG.height - progressBar.height) / 2;
 		add(progressBar);
 		progressBar.scrollFactor.set();
+		progressBar.x -= 20; // meh
 
 		////
 		curSec = _session.curSec;
@@ -1313,6 +1315,7 @@ class ChartingState extends MusicBeatState
 		var allowedFormats = [
 			#if hscript
 			'.hscript',
+			".hx"
 			#end
 		];
 		for (directory in directories)
@@ -2103,7 +2106,7 @@ class ChartingState extends MusicBeatState
 
 	function checkCanMouseScroll():Bool {
 		for (dropDownMenu in blockPressWhileScrolling) {
-			if (dropDownMenu.header.button.status == FlxButton.HIGHLIGHT)
+			if (FlxG.mouse.overlaps(dropDownMenu))
 				return false;
 		}
 
@@ -2915,20 +2918,20 @@ class ChartingState extends MusicBeatState
 
 	function updateHeads():Void
 	{
-		var healthIconP1:String ="bf";
-		var healthIconP2:String = "dad";
+		var healthIconP1:String = CharacterData.getCharacterFile(_song.player1) != null ? CharacterData.getCharacterFile(_song.player1).healthicon : "face";
+		var healthIconP2:String = CharacterData.getCharacterFile(_song.player2) != null ? CharacterData.getCharacterFile(_song.player2).healthicon : "face";
 
 		if (_song.notes[curSec].mustHitSection)
 		{
 			leftIcon.changeIcon(healthIconP1);
 			rightIcon.changeIcon(healthIconP2);
-			if (_song.notes[curSec].gfSection) leftIcon.changeIcon('gf');
+			if (_song.notes[curSec].gfSection) leftIcon.changeIcon(CharacterData.getCharacterFile(_song.gfVersion) != null ? CharacterData.getCharacterFile(_song.gfVersion).healthicon : "gf");
 		}
 		else
 		{
 			leftIcon.changeIcon(healthIconP2);
 			rightIcon.changeIcon(healthIconP1);
-			if (_song.notes[curSec].gfSection) leftIcon.changeIcon('gf');
+			if (_song.notes[curSec].gfSection) leftIcon.changeIcon(CharacterData.getCharacterFile(_song.gfVersion) != null ? CharacterData.getCharacterFile(_song.gfVersion).healthicon : "gf");
 		}
 
 		leftIcon.setGraphicSize(0, 45);

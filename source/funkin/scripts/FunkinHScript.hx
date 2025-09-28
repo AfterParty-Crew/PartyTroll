@@ -268,6 +268,8 @@ class FunkinHScript extends FunkinScript
 		set("FlxTypedEmitter", flixel.effects.particles.FlxEmitter.FlxTypedEmitter);
 		set("FlxSkewedSprite", flixel.addons.effects.FlxSkewedSprite);
 
+		set("FlxTypeText", flixel.addons.text.FlxTypeText);
+
 		// Abstracts
 		set("BlendMode", Wrappers.BlendMode);
 
@@ -385,6 +387,11 @@ class FunkinHScript extends FunkinScript
 		set("HScriptedSubstate", funkin.states.scripting.HScriptedSubstate);
 
 		set("Highscore", funkin.data.Highscore); // Useful for stuff like levels showing diff songs before and after finishing (i.e Weekend 1)
+
+		set("Json", {
+			parse: haxe.Json.parse,
+			stringify: haxe.Json.stringify
+		});
 	} 
 
 	function importClass(className:String)
